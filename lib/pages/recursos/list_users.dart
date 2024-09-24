@@ -52,7 +52,7 @@ class _BuildUserListState extends State<BuildUserList> {
           ),
           Container(
             decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(10), color: Colors.grey),
+                borderRadius: BorderRadius.circular(8), color: Colors.grey),
             child: ListTile(
               trailing: const Icon(
                 Icons.keyboard_arrow_right,
