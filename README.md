@@ -1,6 +1,7 @@
-# app_mensagem
+# TaskTalker
 
-A new Flutter project.
+Projeto Flutter de um aplicativo de troca mensagens , delegação e visualização de tarefas com integração ao google calendar.
+Abaixo, mostra as informações do App e um vídeo demonstração.
 
 ## Getting Started
 
