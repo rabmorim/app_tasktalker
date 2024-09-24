@@ -26,9 +26,8 @@ class _BuildUserListState extends State<BuildUserList> {
         }
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(
-            child:  CircularProgressIndicator(
+            child: CircularProgressIndicator(
               color: Colors.white,
-              
             ),
           );
         }
@@ -46,27 +45,42 @@ class _BuildUserListState extends State<BuildUserList> {
 
     //Mostrar todos os usuarios exceto o que está presente
     if (_auth.currentUser!.uid != data['uid']) {
-      return ListTile(
-        titleAlignment: ListTileTitleAlignment.center ,
-        title: Text(data['userName']),
-        onTap: () {
-          //Vai para a pagina de chat
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => ChatPage(
-                receiverUserEmail: data['email'],
-                receiverUserID: data['uid'], 
-                receiverUserName: data['userName'],
+      return Column(
+        children: [
+          const SizedBox(
+            height: 5,
+          ),
+          Container(
+            decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(10), color: Colors.grey),
+            child: ListTile(
+              trailing: const Icon(
+                Icons.keyboard_arrow_right,
+                size: 20,
               ),
+              titleAlignment: ListTileTitleAlignment.center,
+              title: Text(data['userName']),
+              onTap: () {
+                //Vai para a pagina de chat
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ChatPage(
+                      receiverUserEmail: data['email'],
+                      receiverUserID: data['uid'],
+                      receiverUserName: data['userName'],
+                    ),
+                  ),
+                );
+              },
+              leading: const Icon(Icons.person),
             ),
-          );
-        },
-        leading: const Icon(Icons.person),
+          ),
+        ],
       );
-    } else{
+    } else {
       //Retornar um container em branco
       return const SizedBox();
     }
-  } 
+  }
 }

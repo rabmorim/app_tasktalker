@@ -18,6 +18,7 @@ class MyButton extends StatelessWidget {
         return GestureDetector(
           onTap: onTap,
           child: Container(
+            height: 55,
             width: tela.width-60,
             padding: const EdgeInsets.all(9),
             decoration:  const BoxDecoration(
@@ -26,9 +27,10 @@ class MyButton extends StatelessWidget {
             ),
             child: Center(
               child: Text(
+                textAlign: TextAlign.center,
                 text,
                 style: const TextStyle(
-                  fontSize: 20,
+                  fontSize: 18,
                   color: Colors.white
                 ),
                 ),

@@ -69,6 +69,8 @@ dependencies:
 
   google_fonts: ^6.2.1
   flutter_local_notifications: ^17.2.2
+  #Font Awesome icons
+  font_awesome_flutter: ^10.7.0
 
 dev_dependencies:
   flutter_test:

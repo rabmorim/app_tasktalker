@@ -5,6 +5,7 @@ import 'package:app_mensagem/pages/recursos/data_time_field.dart';
 import 'package:app_mensagem/pages/recursos/drawer.dart';
 import 'package:app_mensagem/pages/recursos/list_users_dropdown.dart';
 import 'package:app_mensagem/pages/recursos/text_field.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
@@ -33,6 +34,8 @@ class _FormCalendarWidgetState extends State<FormCalendarWidget> {
   final List<int> reminderOptions = [5, 10, 18, 30, 60, 120]; // Minutos
   // Lista de opções para a notificação
   final List<String> notificationOptions = ['popup', 'email'];
+  // Variável para armazenar o usuário selecionado (a quem a tarefa será delegada)
+  String? selectedUser;
 
   @override
   Widget build(BuildContext context) {
@@ -50,7 +53,16 @@ class _FormCalendarWidgetState extends State<FormCalendarWidget> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const UserListDropdown(),
+                //DropDown dos usuarios
+                UserListDropdown(
+                  onUserSelected: (userId) {
+                    setState(
+                      () {
+                        selectedUser = userId;
+                      },
+                    );
+                  },
+                ),
                 //Espaçamento entre os campos
                 const SizedBox(height: 18),
                 MyTextField(
@@ -79,7 +91,7 @@ class _FormCalendarWidgetState extends State<FormCalendarWidget> {
                 // Dropdown para selecionar o tempo de lembrete
                 DropdownButtonFormField<int>(
                   decoration: const InputDecoration(
-                      labelText: 'Lembrete antes do evento (minutos)'),
+                      labelText: 'Lembrete antes do evento'),
                   value: reminderMinutes,
                   items: reminderOptions.map((int value) {
                     return DropdownMenuItem<int>(
@@ -113,7 +125,7 @@ class _FormCalendarWidgetState extends State<FormCalendarWidget> {
                   },
                 ),
                 //Espaçamento
-                const SizedBox(height: 18),
+                const SizedBox(height: 15),
 
                 MyButton(
                   onTap: () async {
@@ -121,6 +133,23 @@ class _FormCalendarWidgetState extends State<FormCalendarWidget> {
                         .parse(dataInitialField.text);
                     DateTime dateTimeEnd =
                         DateFormat('dd/MM/yyyy HH:mm').parse(dataEndField.text);
+
+                    //Verificação se um usuário foi selecionado
+                    if (selectedUser != null) {
+                      //Criar o registro da tarefa no Firestore para o usuário selecionada
+                      await delegateTaskToUser(
+                          selectedUser!,
+                          eventTextField.text,
+                          descriptionTextField.text,
+                          dateTimeInitial,
+                          dateTimeEnd);
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Selecione um usuário para a tarefa.'),
+                        ),
+                      );
+                    }
 
                     // Criação do evento em formato JSON, incluindo o lembrete
                     var jsonEvent = await eventToJson(
@@ -140,7 +169,7 @@ class _FormCalendarWidgetState extends State<FormCalendarWidget> {
                       await addEventToCalendar(accessToken, jsonEvent);
                     }
                   },
-                  text: 'Adicionar ao Calendário',
+                  text: 'Delegar Tarefa ao Calendário',
                 ),
               ],
             ),
@@ -238,5 +267,25 @@ class _FormCalendarWidgetState extends State<FormCalendarWidget> {
         ),
       );
     }
+  }
+
+  // Função para delegar a tarefa para o Firestore
+  Future<void> delegateTaskToUser(
+    String userId,
+    String title,
+    String description,
+    DateTime startTime,
+    DateTime endTime,
+  ) async {
+    await FirebaseFirestore.instance.collection('tasks').add(
+      {
+        'assigned_to': userId,
+        'title': title,
+        'description': description,
+        'start_time': startTime.toIso8601String(),
+        'end_time': endTime.toIso8601String(),
+        'created_at': DateTime.now().toIso8601String(),
+      },
+    );
   }
 }

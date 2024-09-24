@@ -1,11 +1,13 @@
 import 'package:app_mensagem/pages/calendar_page.dart';
 import 'package:app_mensagem/pages/form_calendar_page.dart';
 import 'package:app_mensagem/pages/home_page.dart';
+import 'package:app_mensagem/pages/user_task_list.dart';
 import 'package:app_mensagem/services/auth/auth_gate.dart';
 import 'package:app_mensagem/services/auth/auth_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
 
 class MenuDrawer extends StatelessWidget {
@@ -76,11 +78,12 @@ class MenuDrawer extends StatelessWidget {
               } else {
                 final String accountName = snapshot.data ?? 'Unknown User';
                 return UserAccountsDrawerHeader(
-                    accountName: mostrarTitulo(accountName),
-                    accountEmail: mostrarSubTitulo(accountEmail),
-                    decoration: const BoxDecoration(
-                      color: Color(0xff303030),
-                    ),);
+                  accountName: mostrarTitulo(accountName),
+                  accountEmail: mostrarSubTitulo(accountEmail),
+                  decoration: const BoxDecoration(
+                    color: Color(0xff303030),
+                  ),
+                );
               }
             },
           ),
@@ -88,9 +91,9 @@ class MenuDrawer extends StatelessWidget {
           ListTile(
             title: mostrarTitulo('Home'),
             subtitle: mostrarSubTitulo('Página inicial'),
-            leading: const Icon(
-              Icons.home,
-              size: 26,
+            leading: const FaIcon(
+              FontAwesomeIcons.house,
+              size: 24,
             ),
             trailing: const Icon(
               Icons.keyboard_arrow_right,
@@ -109,10 +112,11 @@ class MenuDrawer extends StatelessWidget {
           //Ícone Adicionar no Google Calendar
           ListTile(
             title: mostrarTitulo('Google Calendar'),
-            subtitle: mostrarSubTitulo('Adicione tarefas e eventos ao Google Calendar'),
-            leading: const Icon(
-              Icons.calendar_month,
-              size: 26,
+            subtitle: mostrarSubTitulo(
+                'Adicione tarefas e eventos ao Google Calendar'),
+            leading: const FaIcon(
+              FontAwesomeIcons.calendar,
+              size: 24,
             ),
             trailing: const Icon(
               Icons.keyboard_arrow_right,
@@ -130,10 +134,11 @@ class MenuDrawer extends StatelessWidget {
           //Ícone Calendário Imbutido no flutter
           ListTile(
             title: mostrarTitulo('Calendário'),
-            subtitle: mostrarSubTitulo('Traga seus compromissos do Google Calendar'),
-            leading: const Icon(
-              Icons.calendar_view_month,
-              size: 26,
+            subtitle:
+                mostrarSubTitulo('Traga seus compromissos do Google Calendar'),
+            leading: const FaIcon(
+              FontAwesomeIcons.calendarDays,
+              size: 24,
             ),
             trailing: const Icon(
               Icons.keyboard_arrow_right,
@@ -148,14 +153,33 @@ class MenuDrawer extends StatelessWidget {
               );
             },
           ),
+          //Ícone Tarefas
+          ListTile(
+            title: mostrarTitulo('Tarefas'),
+            subtitle: mostrarSubTitulo('Minhas Tarefas'),
+            leading: const FaIcon(
+              FontAwesomeIcons.barsProgress,
+              size: 24,
+            ),
+            trailing: const Icon(
+              Icons.keyboard_arrow_right,
+              size: 20,
+            ),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const UserTaskList()),
+              );
+            },
+          ),
 
           //Ícone logout
           ListTile(
             title: mostrarTitulo('Logout'),
             subtitle: mostrarSubTitulo('Sair'),
-            leading: const Icon(
-              Icons.logout,
-              size: 26,
+            leading: const FaIcon(
+              FontAwesomeIcons.rightFromBracket,
+              size: 24,
             ),
             trailing: const Icon(
               Icons.keyboard_arrow_right,
@@ -164,7 +188,8 @@ class MenuDrawer extends StatelessWidget {
             onTap: () {
               signOut();
               MaterialPageRoute(
-                  builder: (context) => const AuthGate(),);
+                builder: (context) => const AuthGate(),
+              );
             },
           )
         ],

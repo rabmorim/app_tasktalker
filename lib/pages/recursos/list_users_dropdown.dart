@@ -1,9 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
-
 class UserListDropdown extends StatefulWidget {
-  const UserListDropdown({super.key});
+  final Function(String)? onUserSelected; // Callback para quando o usuário for selecionado
+
+  const UserListDropdown({super.key, this.onUserSelected}); // Adicionando o parâmetro ao construtor
 
   @override
   State<UserListDropdown> createState() => _UserListDropdownState();
@@ -46,6 +47,11 @@ class _UserListDropdownState extends State<UserListDropdown> {
           onChanged: (String? newValue) {
             setState(() {
               selectedUser = newValue; // Atualiza o usuário selecionado
+
+              // Chama o callback quando o usuário é selecionado
+              if (widget.onUserSelected != null) {
+                widget.onUserSelected!(newValue!);
+              }
             });
           },
         );
