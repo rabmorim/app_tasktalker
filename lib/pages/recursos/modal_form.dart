@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'package:app_mensagem/pages/recursos/list_users_dropdown.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:http/http.dart' as http;
 import 'package:app_mensagem/pages/recursos/button.dart';
 import 'package:app_mensagem/pages/recursos/data_time_field.dart';
@@ -31,6 +33,8 @@ class _ModalFormState extends State<ModalForm> {
     final List<int> reminderOptions = [5, 10, 15, 30, 60, 120]; // Minutos
     // Lista de opções para a notificação
     final List<String> notificationOptions = ['popup', 'email'];
+    // Variável para armazenar o usuário selecionado (a quem a tarefa será delegada)
+    String? selectedUser;
     return Scaffold(
       body: SingleChildScrollView(
         child: Center(
@@ -38,10 +42,23 @@ class _ModalFormState extends State<ModalForm> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const SizedBox(
-                height: 10,
+                height: 5,
+              ),
+              UserListDropdown(
+                onUserSelected: (userId) {
+                  setState(
+                    () {
+                      selectedUser = userId;
+                    },
+                  );
+                },
+              ),
+              //Espaçamento entre os campos
+              const SizedBox(
+                height: 2,
               ),
               SizedBox(
-                width: tela.width-150,
+                width: tela.width - 150,
                 child: MyTextField(
                     controller: eventTextField,
                     labelText: 'Informe o Evento ou Tarefa',
@@ -52,7 +69,7 @@ class _ModalFormState extends State<ModalForm> {
                 height: 25,
               ),
               SizedBox(
-                width: tela.width-150,
+                width: tela.width - 150,
                 child: MyTextField(
                     controller: descriptionTextField,
                     labelText: 'Descrição',
@@ -63,7 +80,7 @@ class _ModalFormState extends State<ModalForm> {
                 height: 25,
               ),
               SizedBox(
-                width: tela.width-150,
+                width: tela.width - 150,
                 child: MyDateTimeField(
                     controller: dataInitialField,
                     labelText: 'Data e Hora do Início'),
@@ -73,7 +90,7 @@ class _ModalFormState extends State<ModalForm> {
                 height: 25,
               ),
               SizedBox(
-                width: tela.width-150,
+                width: tela.width - 150,
                 child: MyDateTimeField(
                     controller: dataEndField, labelText: 'Data e Hora do Fim'),
               ),
@@ -83,7 +100,7 @@ class _ModalFormState extends State<ModalForm> {
               ),
               // Dropdown para selecionar o tempo de lembrete
               SizedBox(
-                width: tela.width-150,
+                width: tela.width - 150,
                 child: DropdownButtonFormField<int>(
                   decoration: const InputDecoration(
                       labelText: 'Lembrete antes do evento (minutos)'),
@@ -107,7 +124,7 @@ class _ModalFormState extends State<ModalForm> {
               ),
               // Dropdown para selecionar o tipo de notificação
               SizedBox(
-                width: tela.width-150,
+                width: tela.width - 150,
                 child: DropdownButtonFormField<dynamic>(
                   decoration:
                       const InputDecoration(labelText: 'Tipo de lembrete'),
@@ -129,7 +146,7 @@ class _ModalFormState extends State<ModalForm> {
                 height: 25,
               ),
               SizedBox(
-                width: tela.width-150,
+                width: tela.width - 150,
                 child: MyButton(
                   onTap: () async {
                     // Obter as datas a partir dos campos MyDateTimeField
@@ -137,7 +154,24 @@ class _ModalFormState extends State<ModalForm> {
                         .parse(dataInitialField.text);
                     DateTime dateTimeEnd =
                         DateFormat('dd/MM/yyyy HH:mm').parse(dataEndField.text);
-                
+                        
+                    //Verificação se um usuário foi selecionado
+                    if (selectedUser != null) {
+                      //Criar o registro da tarefa no Firestore para o usuário selecionada
+                      await delegateTaskToUser(
+                          selectedUser!,
+                          eventTextField.text,
+                          descriptionTextField.text,
+                          dateTimeInitial,
+                          dateTimeEnd);
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Selecione um usuário para a tarefa.'),
+                        ),
+                      );
+                    }
+
                     // Primeiro, crie o evento em formato JSON
                     var jsonEvent = await eventToJson(
                         eventTextField.text,
@@ -146,10 +180,10 @@ class _ModalFormState extends State<ModalForm> {
                         dateTimeEnd,
                         reminderMinutes,
                         notification);
-                
+
                     // Em seguida, faça a autenticação com o Google para obter o token
                     String? accessToken = await signInWithGoogle();
-                
+
                     if (accessToken != null) {
                       // Finalmente, adicione o evento ao Google Calendar usando o token e o JSON do evento
                       await addEventToCalendar(accessToken, jsonEvent);
@@ -253,5 +287,25 @@ class _ModalFormState extends State<ModalForm> {
         ),
       );
     }
+  }
+
+  // Função para delegar a tarefa para o Firestore
+  Future<void> delegateTaskToUser(
+    String userId,
+    String title,
+    String description,
+    DateTime startTime,
+    DateTime endTime,
+  ) async {
+    await FirebaseFirestore.instance.collection('tasks').add(
+      {
+        'assigned_to': userId,
+        'title': title,
+        'description': description,
+        'start_time': startTime.toIso8601String(),
+        'end_time': endTime.toIso8601String(),
+        'created_at': DateTime.now().toIso8601String(),
+      },
+    );
   }
 }
