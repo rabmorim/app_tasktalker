@@ -17,6 +17,8 @@ class ModalForm extends StatefulWidget {
 }
 
 class _ModalFormState extends State<ModalForm> {
+  // Variável para armazenar o usuário selecionado (a quem a tarefa será delegada)
+  String? selectedUser;
   @override
   Widget build(BuildContext context) {
     Size tela = MediaQuery.of(context).size;
@@ -33,8 +35,7 @@ class _ModalFormState extends State<ModalForm> {
     final List<int> reminderOptions = [5, 10, 15, 30, 60, 120]; // Minutos
     // Lista de opções para a notificação
     final List<String> notificationOptions = ['popup', 'email'];
-    // Variável para armazenar o usuário selecionado (a quem a tarefa será delegada)
-    String? selectedUser;
+
     return Scaffold(
       body: SingleChildScrollView(
         child: Center(
@@ -154,7 +155,7 @@ class _ModalFormState extends State<ModalForm> {
                         .parse(dataInitialField.text);
                     DateTime dateTimeEnd =
                         DateFormat('dd/MM/yyyy HH:mm').parse(dataEndField.text);
-                        
+
                     //Verificação se um usuário foi selecionado
                     if (selectedUser != null) {
                       //Criar o registro da tarefa no Firestore para o usuário selecionada
@@ -245,6 +246,12 @@ class _ModalFormState extends State<ModalForm> {
           await googleSignIn.signIn();
       final GoogleSignInAuthentication googleSignInAuthentication =
           await googleSignInAccount!.authentication;
+      //Pegando o Id do usuário
+      String? userId = selectedUser!;
+      await FirebaseFirestore.instance.collection('users').doc(userId).set(
+        {'googleAccessToken': googleSignInAuthentication.accessToken},
+        SetOptions(merge: true),
+      );
       return googleSignInAuthentication.accessToken;
     } catch (error) {
       // ignore: use_build_context_synchronously

@@ -1,6 +1,7 @@
 import 'package:app_mensagem/pages/calendar_page.dart';
 import 'package:app_mensagem/pages/home_page.dart';
 import 'package:app_mensagem/pages/recursos/list_users.dart';
+import 'package:app_mensagem/pages/user_task_list_google.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -24,7 +25,7 @@ class _UserTaskListState extends State<UserTaskList> {
     super.initState();
     _pages = [
       const UserTaskList(),
-      const BuildUserList(),
+      const UserTaskListGoogle(),
     ];
   }
 
@@ -88,11 +89,16 @@ class _UserTaskListState extends State<UserTaskList> {
                       final String? startTime = data['start_time'];
                       final String? endTime = data['end_time'];
 
-                      // Formatação das datas (caso existam)
+                      // Formatação das horas
                       String startFormatted =
                           startTime != null ? formatTime(startTime) : '';
                       String endFormatted =
                           endTime != null ? formatTime(endTime) : '';
+
+                      //Formação de Datas
+                      String dateFormatInitial = startTime != null ? formatDate(startTime): '';
+
+                      String dateFormatFinal = startTime != null ? formatDate(startTime): '';
 
                       return Column(
                         children: [
@@ -106,7 +112,7 @@ class _UserTaskListState extends State<UserTaskList> {
                                     const Color.fromARGB(255, 116, 111, 111)),
                             child: ListTile(
                               title: Column(
-                                mainAxisAlignment: MainAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   Text(
                                     data['title'] ?? 'Tarefa sem Título',
@@ -119,7 +125,7 @@ class _UserTaskListState extends State<UserTaskList> {
                                 ],
                               ),
                               subtitle: Column(
-                                mainAxisAlignment: MainAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   Text(
                                     data['description'] ?? 'Sem Descrição',
@@ -130,6 +136,12 @@ class _UserTaskListState extends State<UserTaskList> {
                                     "$startFormatted - $endFormatted",
                                     style:
                                         const TextStyle(color: Colors.white54),
+                                  ),
+                                  Text(
+                                    "Inicio: $dateFormatInitial - Fim: $dateFormatFinal",
+                                    style: const TextStyle(
+                                      color: Colors.white54
+                                    ),
                                   )
                                 ],
                               ),
@@ -186,5 +198,9 @@ class _UserTaskListState extends State<UserTaskList> {
     DateTime dateTime = DateTime.parse(dateTimeString).toLocal();
     return DateFormat('HH:mm')
         .format(dateTime); // Formato de 24 horas (ex: 14:30)
+  }
+  String formatDate(String dateString){
+    DateTime dateFormat = DateTime.parse(dateString).toLocal();
+    return DateFormat('dd/MM/yyyy').format(dateFormat);
   }
 }

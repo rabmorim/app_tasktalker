@@ -225,6 +225,12 @@ class _FormCalendarWidgetState extends State<FormCalendarWidget> {
           await googleSignIn.signIn();
       final GoogleSignInAuthentication googleSignInAuthentication =
           await googleSignInAccount!.authentication;
+      //Pegando o Id do usuário
+      String? userId = selectedUser!;
+      await FirebaseFirestore.instance.collection('users').doc(userId).set(
+        {'googleAccessToken': googleSignInAuthentication.accessToken},
+        SetOptions(merge: true),
+      );
       return googleSignInAuthentication.accessToken;
     } catch (error) {
       // ignore: use_build_context_synchronously
