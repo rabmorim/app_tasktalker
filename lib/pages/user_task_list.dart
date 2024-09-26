@@ -1,6 +1,5 @@
 import 'package:app_mensagem/pages/calendar_page.dart';
 import 'package:app_mensagem/pages/home_page.dart';
-import 'package:app_mensagem/pages/recursos/list_users.dart';
 import 'package:app_mensagem/pages/user_task_list_google.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
