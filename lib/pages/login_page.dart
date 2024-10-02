@@ -21,6 +21,7 @@ class LoginPageState extends State<LoginPage> {
 
   //Logar
   void login() async {
+    
     //Primeiro obter o serviço de autenticação
     final authService = Provider.of<AuthService>(context, listen: false);
     try {

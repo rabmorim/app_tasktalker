@@ -6,6 +6,7 @@ import 'package:app_mensagem/pages/recursos/drawer.dart';
 import 'package:app_mensagem/pages/recursos/list_users_dropdown.dart';
 import 'package:app_mensagem/pages/recursos/text_field.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
@@ -44,7 +45,7 @@ class _FormCalendarWidgetState extends State<FormCalendarWidget> {
         titulo: 'Adicionar Evento',
         isCalendarPage: false,
       ),
-      drawer: MenuDrawer(),
+      drawer: const MenuDrawer(),
       body: SingleChildScrollView(
         padding: const EdgeInsets.only(top: 30),
         child: Center(
@@ -161,12 +162,25 @@ class _FormCalendarWidgetState extends State<FormCalendarWidget> {
                         notification //passando o tipo de notificação
                         );
 
-                    // Obter token de acesso
-                    String? accessToken = await signInWithGoogle();
+                    // Recuperar o accessToken do usuário delegado do Firestore
+                    DocumentSnapshot userDoc = await FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(selectedUser!)
+                        .get();
+                    String? accessToken = userDoc.get('googleAccessToken');
+                    
 
                     if (accessToken != null) {
                       // Adicionar evento ao calendário
                       await addEventToCalendar(accessToken, jsonEvent);
+                    } else {
+                      // ignore: use_build_context_synchronously
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                              'Usuário delegado não autenticou com Google Calendar'),
+                        ),
+                      );
                     }
                   },
                   text: 'Delegar Tarefa ao Calendário',
@@ -226,7 +240,7 @@ class _FormCalendarWidgetState extends State<FormCalendarWidget> {
       final GoogleSignInAuthentication googleSignInAuthentication =
           await googleSignInAccount!.authentication;
       //Pegando o Id do usuário
-      String? userId = selectedUser!;
+      String? userId = FirebaseAuth.instance.currentUser?.uid;
       await FirebaseFirestore.instance.collection('users').doc(userId).set(
         {'googleAccessToken': googleSignInAuthentication.accessToken},
         SetOptions(merge: true),

@@ -1,5 +1,6 @@
 import 'package:app_mensagem/pages/calendar_page.dart';
 import 'package:app_mensagem/pages/form_calendar_page.dart';
+import 'package:app_mensagem/pages/google_conection.dart';
 import 'package:app_mensagem/pages/home_page.dart';
 import 'package:app_mensagem/pages/user_task_list.dart';
 import 'package:app_mensagem/services/auth/auth_gate.dart';
@@ -8,15 +9,42 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:provider/provider.dart';
 
-class MenuDrawer extends StatelessWidget {
-  MenuDrawer({super.key});
+class MenuDrawer extends StatefulWidget {
+  const MenuDrawer({super.key});
 
+  @override
+  State<MenuDrawer> createState() => _MenuDrawerState();
+}
+
+class _MenuDrawerState extends State<MenuDrawer> {
   // Pegando a instância do FirebaseAuth
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
+
   // Pegando a instância do FirebaseFirestore
   final FirebaseFirestore _firebaseFirestore = FirebaseFirestore.instance;
+
+  // Variável de controle de estado dos botões
+  bool isLoggedInWithGoogle = false;
+
+  @override
+  void initState() {
+    super.initState();
+    checkGoogleLogin();
+  }
+
+  void checkGoogleLogin() async {
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      // Verifica se o usuário está logado com o Google
+      final googleUser = await GoogleSignIn().isSignedIn();
+      setState(() {
+        isLoggedInWithGoogle = googleUser;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -32,7 +60,7 @@ class MenuDrawer extends StatelessWidget {
       return userDoc.get('userName') ?? 'Unknown User';
     }
 
-    //método para mostrar o titulo e editar as configurações
+    // Método para mostrar o título e editar as configurações
     Text mostrarTitulo(String texto) {
       return Text(
         texto,
@@ -41,7 +69,7 @@ class MenuDrawer extends StatelessWidget {
       );
     }
 
-    //método para mostrar o subtitulo e editar as configurações
+    // Método para mostrar o subtítulo e editar as configurações
     Text mostrarSubTitulo(String texto) {
       return Text(
         texto,
@@ -56,10 +84,9 @@ class MenuDrawer extends StatelessWidget {
       authService.signOut();
     }
 
-    //Retorna o menu drawer da aplicação
     return Drawer(
       child: ListView(
-        //Lógica para pegar o userName e colocar no header
+        // Lógica para pegar o userName e colocar no header
         children: [
           FutureBuilder<String>(
             future: getUserName(),
@@ -87,111 +114,160 @@ class MenuDrawer extends StatelessWidget {
               }
             },
           ),
-          //Ícone Home
-          ListTile(
-            title: mostrarTitulo('Home'),
-            subtitle: mostrarSubTitulo('Página inicial'),
-            leading: const FaIcon(
-              FontAwesomeIcons.house,
-              size: 24,
-            ),
-            trailing: const Icon(
-              Icons.keyboard_arrow_right,
-              size: 20,
-            ),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const HomePage(),
-                ),
-              );
-            },
-          ),
 
-          //Ícone Adicionar no Google Calendar
-          ListTile(
-            title: mostrarTitulo('Google Calendar'),
-            subtitle: mostrarSubTitulo(
-                'Adicione tarefas e eventos ao Google Calendar'),
-            leading: const FaIcon(
-              FontAwesomeIcons.calendar,
-              size: 24,
+          // Exibir apenas o botão de login se o usuário não estiver logado
+          if (!isLoggedInWithGoogle) ...[
+            // Ícone de Logar com o Google
+            ListTile(
+              title: mostrarTitulo('Conectar ao Google'),
+              subtitle: mostrarSubTitulo(
+                  'Conecte ao google para utilizar as funcionalidades do app'),
+              leading: const FaIcon(
+                FontAwesomeIcons.google,
+                size: 24,
+              ),
+              trailing: const Icon(
+                Icons.keyboard_arrow_right,
+                size: 20,
+              ),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ConnectGooglePage(),
+                  ),
+                );
+              },
             ),
-            trailing: const Icon(
-              Icons.keyboard_arrow_right,
-              size: 20,
-            ),
-            onTap: () {
-              Navigator.push(
-                context,
+            // Ícone logout
+            ListTile(
+              title: mostrarTitulo('Logout'),
+              subtitle: mostrarSubTitulo('Sair'),
+              leading: const FaIcon(
+                FontAwesomeIcons.rightFromBracket,
+                size: 24,
+              ),
+              trailing: const Icon(
+                Icons.keyboard_arrow_right,
+                size: 20,
+              ),
+              onTap: () {
+                signOut();
                 MaterialPageRoute(
-                  builder: (context) => const FormCalendarWidget(),
-                ),
-              );
-            },
-          ),
-          //Ícone Calendário Imbutido no flutter
-          ListTile(
-            title: mostrarTitulo('Calendário'),
-            subtitle:
-                mostrarSubTitulo('Traga seus compromissos do Google Calendar'),
-            leading: const FaIcon(
-              FontAwesomeIcons.calendarDays,
-              size: 24,
+                  builder: (context) => const AuthGate(),
+                );
+              },
             ),
-            trailing: const Icon(
-              Icons.keyboard_arrow_right,
-              size: 20,
+          ] else ...[
+            // Exibir os outros botões somente após o login com o Google
+            ListTile(
+              title: mostrarTitulo('Home'),
+              subtitle: mostrarSubTitulo('Página inicial'),
+              leading: const FaIcon(
+                FontAwesomeIcons.house,
+                size: 24,
+              ),
+              trailing: const Icon(
+                Icons.keyboard_arrow_right,
+                size: 20,
+              ),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const HomePage(),
+                  ),
+                );
+              },
             ),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const CalendarPage(),
-                ),
-              );
-            },
-          ),
-          //Ícone Tarefas
-          ListTile(
-            title: mostrarTitulo('Tarefas'),
-            subtitle: mostrarSubTitulo('Minhas Tarefas'),
-            leading: const FaIcon(
-              FontAwesomeIcons.barsProgress,
-              size: 24,
-            ),
-            trailing: const Icon(
-              Icons.keyboard_arrow_right,
-              size: 20,
-            ),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const UserTaskList()),
-              );
-            },
-          ),
 
-          //Ícone logout
-          ListTile(
-            title: mostrarTitulo('Logout'),
-            subtitle: mostrarSubTitulo('Sair'),
-            leading: const FaIcon(
-              FontAwesomeIcons.rightFromBracket,
-              size: 24,
+            // Ícone Adicionar no Google Calendar
+            ListTile(
+              title: mostrarTitulo('Google Calendar'),
+              subtitle: mostrarSubTitulo(
+                  'Adicione tarefas e eventos ao Google Calendar'),
+              leading: const FaIcon(
+                FontAwesomeIcons.calendar,
+                size: 24,
+              ),
+              trailing: const Icon(
+                Icons.keyboard_arrow_right,
+                size: 20,
+              ),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const FormCalendarWidget(),
+                  ),
+                );
+              },
             ),
-            trailing: const Icon(
-              Icons.keyboard_arrow_right,
-              size: 20,
+
+            // Ícone Calendário Imbutido no Flutter
+            ListTile(
+              title: mostrarTitulo('Calendário'),
+              subtitle: mostrarSubTitulo(
+                  'Traga seus compromissos do Google Calendar'),
+              leading: const FaIcon(
+                FontAwesomeIcons.calendarDays,
+                size: 24,
+              ),
+              trailing: const Icon(
+                Icons.keyboard_arrow_right,
+                size: 20,
+              ),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const CalendarPage(),
+                  ),
+                );
+              },
             ),
-            onTap: () {
-              signOut();
-              MaterialPageRoute(
-                builder: (context) => const AuthGate(),
-              );
-            },
-          )
+
+            // Ícone Tarefas
+            ListTile(
+              title: mostrarTitulo('Tarefas'),
+              subtitle: mostrarSubTitulo('Minhas Tarefas'),
+              leading: const FaIcon(
+                FontAwesomeIcons.barsProgress,
+                size: 24,
+              ),
+              trailing: const Icon(
+                Icons.keyboard_arrow_right,
+                size: 20,
+              ),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const UserTaskList(),
+                  ),
+                );
+              },
+            ),
+            // Ícone logout
+            ListTile(
+              title: mostrarTitulo('Logout'),
+              subtitle: mostrarSubTitulo('Sair'),
+              leading: const FaIcon(
+                FontAwesomeIcons.rightFromBracket,
+                size: 24,
+              ),
+              trailing: const Icon(
+                Icons.keyboard_arrow_right,
+                size: 20,
+              ),
+              onTap: () {
+                signOut();
+                MaterialPageRoute(
+                  builder: (context) => const AuthGate(),
+                );
+              },
+            ),
+          ]
         ],
       ),
     );

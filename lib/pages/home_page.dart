@@ -16,9 +16,9 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return  Scaffold(
-      appBar: const BarraSuperior(titulo: 'HomePage', isCalendarPage: false,),
-      body: const BuildUserList(),
+    return  const Scaffold(
+      appBar: BarraSuperior(titulo: 'HomePage', isCalendarPage: false,),
+      body: BuildUserList(),
       drawer: MenuDrawer(),
     );
   }

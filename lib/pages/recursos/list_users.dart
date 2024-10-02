@@ -35,6 +35,7 @@ class _BuildUserListState extends State<BuildUserList> {
           children: snapshot.data!.docs
               .map<Widget>((doc) => _buildUserListItem(doc))
               .toList(),
+              
         );
       },
     );
@@ -83,4 +84,6 @@ class _BuildUserListState extends State<BuildUserList> {
       return const SizedBox();
     }
   }
+
+  
 }

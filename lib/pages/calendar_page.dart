@@ -189,7 +189,7 @@ class _CalendarPageState extends State<CalendarPage> {
         isCalendarPage: true,
         onFormatChanged: _handleFormatChange,
       ),
-      drawer: MenuDrawer(),
+      drawer: const MenuDrawer(),
       body: Column(
         children: [
           TableCalendar(
