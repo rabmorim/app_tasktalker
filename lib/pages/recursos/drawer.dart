@@ -117,7 +117,7 @@ class _MenuDrawerState extends State<MenuDrawer> {
 
           // Exibir apenas o botão de login se o usuário não estiver logado
           if (!isLoggedInWithGoogle) ...[
-            // Ícone de Logar com o Google
+            // Ícone de Logar com o Google 
             ListTile(
               title: mostrarTitulo('Conectar ao Google'),
               subtitle: mostrarSubTitulo(
