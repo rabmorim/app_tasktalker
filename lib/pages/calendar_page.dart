@@ -1,12 +1,10 @@
 import 'package:app_mensagem/pages/recursos/barra_superior.dart';
 import 'package:app_mensagem/pages/recursos/drawer.dart';
 import 'package:app_mensagem/pages/recursos/modal_form.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
-import 'dart:convert';
-import 'package:google_sign_in/google_sign_in.dart';
-import 'package:http/http.dart' as http;
 
 final now = DateTime.now();
 DateTime? _selectedDay;
@@ -27,111 +25,23 @@ class _CalendarPageState extends State<CalendarPage> {
   @override
   void initState() {
     super.initState();
-    loadGoogleCalendarEvents();
+    loadFirestoreTasks();
   }
 
-  Future<void> loadGoogleCalendarEvents() async {
-    String? accessToken = await signInWithGoogle();
+  Future<void> loadFirestoreTasks() async {
+    QuerySnapshot snapshot =
+        await FirebaseFirestore.instance.collection('tasks').get();
+    List<Map<String, dynamic>> tasks =
+        snapshot.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
 
-    if (accessToken != null) {
-      try {
-        List<dynamic> events = await getEventsFromGoogleCalendar(accessToken);
-
-        setState(() {
-          eventsMap = groupEventsByDate(events);
-          if (_selectedDay != null) {
-            _selectedEvents = eventsMap[_selectedDay!] ?? [];
-          }
-        });
-      } catch (e) {
-        // ignore: use_build_context_synchronously
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erro ao carregar eventos: $e'),
-          ),
-        );
-      }
-    }
-  }
-
-  Future<String?> signInWithGoogle() async {
-    try {
-      final GoogleSignIn googleSignIn = GoogleSignIn(
-        scopes: [
-          'https://www.googleapis.com/auth/calendar',
-          'https://www.googleapis.com/auth/calendar.events',
-        ],
-      );
-
-      final GoogleSignInAccount? googleSignInAccount =
-          await googleSignIn.signIn();
-
-      if (googleSignInAccount == null) {
-        throw Exception('Usuário cancelou o login');
-      }
-
-      GoogleSignInAuthentication googleSignInAuthentication =
-          await googleSignInAccount.authentication;
-
-      String? accessToken = googleSignInAuthentication.accessToken;
-      String? idToken = googleSignInAuthentication.idToken;
-
-      if (accessToken == null && idToken != null) {
-        accessToken = await fetchAccessTokenFromIdToken(idToken);
-      }
-
-      return accessToken;
-    } catch (error) {
-      // ignore: use_build_context_synchronously
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(error.toString()),
-        ),
-      );
-      return null;
-    }
-  }
-
-  Future<String?> fetchAccessTokenFromIdToken(String idToken) async {
-    final response = await http.post(
-      Uri.parse('https://oauth2.googleapis.com/token'),
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: {
-        'grant_type': 'urn:ietf:params:oauth:grant-type:jwt-bearer',
-        'assertion': idToken,
+    setState(
+      () {
+        eventsMap = groupEventsByDate(tasks);
+        if (_selectedDay != null) {
+          _selectedEvents = eventsMap[_selectedDay!] ?? [];
+        }
       },
     );
-
-    if (response.statusCode == 200) {
-      final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
-      return jsonResponse['access_token'];
-    } else {
-      throw Exception(
-          'Falha ao obter access token com id token: ${response.statusCode}');
-    }
-  }
-
-  Future<List<dynamic>> getEventsFromGoogleCalendar(String accessToken) async {
-    final headers = {
-      'Authorization': 'Bearer $accessToken',
-      'Content-Type': 'application/json'
-    };
-
-    final response = await http.get(
-      Uri.parse(
-          'https://www.googleapis.com/calendar/v3/calendars/primary/events'),
-      headers: headers,
-    );
-
-    if (response.statusCode == 200) {
-      final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
-      final List<dynamic> events = jsonResponse['items'];
-      return events;
-    } else {
-      throw Exception('Erro ao buscar eventos: ${response.statusCode}');
-    }
   }
 
 //Normalizar as datas
@@ -146,29 +56,21 @@ class _CalendarPageState extends State<CalendarPage> {
         .format(dateTime); // Formato de 24 horas (ex: 14:30)
   }
 
-  Map<DateTime, List<dynamic>> groupEventsByDate(List<dynamic> events) {
+//Agrupando eventos por data
+  Map<DateTime, List<dynamic>> groupEventsByDate(
+      List<Map<String, dynamic>> tasks) {
     Map<DateTime, List<dynamic>> groupedEvents = {};
 
-    for (var event in events) {
-      var startDateTime =
-          event['start']?['dateTime'] ?? event['start']?['date'];
+    for (var task in tasks) {
+      DateTime startDate = DateTime.parse(task['start_time']).toLocal();
+      DateTime endDate = DateTime.parse(task['end_time']).toLocal();
+      DateTime initialNormalizedDate = normalizeDate(startDate);
+      DateTime finalNormalizeDate = normalizeDate(endDate);
 
-      if (startDateTime != null) {
-        DateTime startDate;
-
-        if (event['start']?['dateTime'] != null) {
-          // Caso o evento tenha data e hora (não é de dia inteiro)
-          startDate = DateTime.parse(startDateTime).toLocal();
-        } else {
-          // Caso o evento seja de dia inteiro (apenas 'date', sem hora)
-          startDate = DateTime.parse(startDateTime);
-        }
-
-        DateTime normalizedDate =
-            normalizeDate(startDate); // Normaliza para YYYY-MM-DD
-
-        groupedEvents.putIfAbsent(normalizedDate, () => []).add(event);
-        // print("Evento: $event, Data normalizada: $normalizedDate");
+      // Adicionar evento ao mapa sem duplicação
+      groupedEvents.putIfAbsent(initialNormalizedDate, () => []).add(task);
+      if (initialNormalizedDate != finalNormalizeDate) {
+        groupedEvents.putIfAbsent(finalNormalizeDate, () => []).add(task);
       }
     }
 
@@ -198,10 +100,13 @@ class _CalendarPageState extends State<CalendarPage> {
             },
             onDaySelected: (selectedDay, focusedDay) {
               setState(() {
-                _selectedDay = normalizeDate(selectedDay);
-                _focusedDay = focusedDay;
-                _selectedEvents = eventsMap[selectedDay] ?? [];
-                loadGoogleCalendarEvents();
+                eventsMap = {};
+                if (eventsMap.isEmpty) {
+                  _selectedDay = normalizeDate(selectedDay);
+                  _focusedDay = focusedDay;
+                  _selectedEvents = eventsMap[selectedDay] ?? [];
+                  loadFirestoreTasks();
+                }
               });
             },
             focusedDay: _focusedDay,
@@ -284,8 +189,8 @@ class _CalendarPageState extends State<CalendarPage> {
                     itemCount: _selectedEvents.length,
                     itemBuilder: (context, index) {
                       final event = _selectedEvents[index];
-                      final startTime = event['start']?['dateTime'];
-                      final endTime = event['end']?['dateTime'];
+                      final startTime = event['start_time'];
+                      final endTime = event['end_time'];
                       // Formatação das horas (apenas se houver 'dateTime' nos eventos)
                       String startFormatted =
                           startTime != null ? formatTime(startTime) : '';
@@ -301,7 +206,7 @@ class _CalendarPageState extends State<CalendarPage> {
                         child: ListTile(
                           dense: true,
                           title: Text(
-                            event['summary'] ?? 'Sem título',
+                            event['title'] ?? 'Sem título',
                             style: const TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,
@@ -311,7 +216,7 @@ class _CalendarPageState extends State<CalendarPage> {
                           subtitle: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                               if (event['description'] != null &&
+                              if (event['description'] != null &&
                                   event['description']!.isNotEmpty)
                                 Text(
                                   event[
@@ -320,9 +225,8 @@ class _CalendarPageState extends State<CalendarPage> {
                                 ),
                               Text(
                                 '$startFormatted - $endFormatted', // Mostra a hora de início e fim
-                                style:const  TextStyle(color: Colors.white54),
+                                style: const TextStyle(color: Colors.white54),
                               ),
-                             
                             ],
                           ),
                         ),
