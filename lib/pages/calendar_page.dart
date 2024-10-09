@@ -100,13 +100,10 @@ class _CalendarPageState extends State<CalendarPage> {
             },
             onDaySelected: (selectedDay, focusedDay) {
               setState(() {
-                eventsMap = {};
-                if (eventsMap.isEmpty) {
-                  _selectedDay = normalizeDate(selectedDay);
-                  _focusedDay = focusedDay;
-                  _selectedEvents = eventsMap[selectedDay] ?? [];
-                  loadFirestoreTasks();
-                }
+                _selectedDay = normalizeDate(selectedDay);
+                _focusedDay = focusedDay;
+                _selectedEvents = eventsMap[selectedDay] ?? [];
+                loadFirestoreTasks();
               });
             },
             focusedDay: _focusedDay,

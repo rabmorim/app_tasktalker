@@ -1,5 +1,4 @@
 import 'package:app_mensagem/pages/calendar_page.dart';
-import 'package:app_mensagem/pages/form_calendar_page.dart';
 import 'package:app_mensagem/pages/google_conection.dart';
 import 'package:app_mensagem/pages/home_page.dart';
 import 'package:app_mensagem/pages/user_task_list.dart';
@@ -180,35 +179,11 @@ class _MenuDrawerState extends State<MenuDrawer> {
                 );
               },
             ),
-
-            // Ícone Adicionar no Google Calendar
-            ListTile(
-              title: mostrarTitulo('Google Calendar'),
-              subtitle: mostrarSubTitulo(
-                  'Adicione tarefas e eventos ao Google Calendar'),
-              leading: const FaIcon(
-                FontAwesomeIcons.calendar,
-                size: 24,
-              ),
-              trailing: const Icon(
-                Icons.keyboard_arrow_right,
-                size: 20,
-              ),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const FormCalendarWidget(),
-                  ),
-                );
-              },
-            ),
-
-            // Ícone Calendário Imbutido no Flutter
+            // Ícone Calendário 
             ListTile(
               title: mostrarTitulo('Calendário'),
               subtitle: mostrarSubTitulo(
-                  'Traga seus compromissos do Google Calendar'),
+                  'Veja seus Compromissos'),
               leading: const FaIcon(
                 FontAwesomeIcons.calendarDays,
                 size: 24,
