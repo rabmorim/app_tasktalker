@@ -1,9 +1,12 @@
+import 'package:app_mensagem/pages/recursos/task_color_manager.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 class AuthService extends ChangeNotifier {
+  //Criando uma instãncia da classe de geração de cores
+  TaskColorManager colorManager = TaskColorManager();
   //Lidar com os diferentes métodos de autenticação(Instancia do firebase_auth)
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
 
@@ -20,11 +23,10 @@ class AuthService extends ChangeNotifier {
               email: email, password: password, userName: userName);
 
       //adicionando um novo documento users para o usuário na coleção de usuários, se ainda não existir
-      await _firestore.collection('users').doc(userCredential.user!.uid).set({
-        'uid': userCredential.user!.uid,
-        'email': email,
-        'userName': userName
-      }, SetOptions(merge: true));
+      await _firestore.collection('users').doc(userCredential.user!.uid).set(
+        {'uid': userCredential.user!.uid, 'email': email, 'userName': userName},
+        SetOptions(merge: true),
+      );
 
       return userCredential;
     }
@@ -42,12 +44,22 @@ class AuthService extends ChangeNotifier {
           await _firebaseAuth.createUserWithEmailAndPassword(
               email: email, password: password, userName: userName);
 
-      //Depois de criar o usuário, vamos criar um documento para o usuário na coleção
-      _firestore.collection('users').doc(userCredential.user!.uid).set({
-        'uid': userCredential.user!.uid,
-        'email': email,
-        'userName': userName
-      });
+      // Gerar uma cor aleatória para o usuário
+      Color userColor = colorManager.setColorForUser(userCredential.user!.uid);
+
+      // Converter a cor para uma string hexadecimal
+      String colorHex =
+          '#${userColor.value.toRadixString(16).padLeft(8, '0').toUpperCase()}';
+
+      //Depois de criar o usuário, criar um documento para o usuário na coleção
+      _firestore.collection('users').doc(userCredential.user!.uid).set(
+        {
+          'uid': userCredential.user!.uid,
+          'email': email,
+          'userName': userName,
+          'color': colorHex
+        },
+      );
 
       return userCredential;
     } on FirebaseAuthException catch (e) {
@@ -60,7 +72,7 @@ class AuthService extends ChangeNotifier {
     return await FirebaseAuth.instance.signOut();
   }
 
-// Verificação do usuário
+// Método para Verificação do usuário
   Future<bool> verifyUser(String username) async {
     CollectionReference users = FirebaseFirestore.instance.collection('users');
 
@@ -83,6 +95,7 @@ class AuthService extends ChangeNotifier {
     return false; // Se nenhum documento tiver o nome de usuário
   }
 
+  //Método usado para conectar-se com a conta do google
   Future connectGoogleAccount() async {
     String validou = 'Google Conectado com Sucesso.';
     String invalidou = 'Erro ao conectar ao google';

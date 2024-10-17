@@ -1,6 +1,8 @@
 import 'package:app_mensagem/pages/recursos/barra_superior.dart';
 import 'package:app_mensagem/pages/recursos/drawer.dart';
+import 'package:app_mensagem/pages/recursos/get_user.dart';
 import 'package:app_mensagem/pages/recursos/modal_form.dart';
+import 'package:app_mensagem/pages/recursos/task_color_manager.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -18,9 +20,11 @@ class CalendarPage extends StatefulWidget {
 }
 
 class _CalendarPageState extends State<CalendarPage> {
+  TaskColorManager colorManager = TaskColorManager();
   CalendarFormat _calendarFormat = CalendarFormat.month;
   Map<DateTime, List<dynamic>> eventsMap = {}; // Armazena eventos por data
   List<dynamic> _selectedEvents = []; // Eventos da data selecionada
+  GetUser getUserName = GetUser();
 
   @override
   void initState() {
@@ -33,6 +37,29 @@ class _CalendarPageState extends State<CalendarPage> {
         await FirebaseFirestore.instance.collection('tasks').get();
     List<Map<String, dynamic>> tasks =
         snapshot.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
+
+    // Carregar cores dos usuários
+    for (var task in tasks) {
+      String userId = task['assigned_to'];
+      // Pega o documento do usuário para obter a cor
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .get();
+      if (userDoc.exists) {
+        // Certifique-se que a cor existe no documento do usuário
+        String? userColorHex = userDoc['color'];
+
+        if (userColorHex != null) {
+          // Converte a string hexadecimal em uma cor
+          Color userColor = Color(
+              int.parse(userColorHex.substring(1, 7), radix: 16) + 0xFF000000);
+
+          // Adiciona essa cor no próprio `task` temporariamente para uso na UI
+          task['userColor'] = userColor;
+        }
+      }
+    }
 
     setState(
       () {
@@ -62,16 +89,22 @@ class _CalendarPageState extends State<CalendarPage> {
     Map<DateTime, List<dynamic>> groupedEvents = {};
 
     for (var task in tasks) {
-      DateTime startDate = DateTime.parse(task['start_time']).toLocal();
-      DateTime endDate = DateTime.parse(task['end_time']).toLocal();
-      DateTime initialNormalizedDate = normalizeDate(startDate);
-      DateTime finalNormalizeDate = normalizeDate(endDate);
+      // Verificar se as datas existem antes de tentar parseá-las
+      String? startTimeString = task['start_time'];
+      String? endTimeString = task['end_time'];
 
-      // Adicionar evento ao mapa sem duplicação
-      groupedEvents.putIfAbsent(initialNormalizedDate, () => []).add(task);
-      if (initialNormalizedDate != finalNormalizeDate) {
-        groupedEvents.putIfAbsent(finalNormalizeDate, () => []).add(task);
-      }
+      if (startTimeString != null && endTimeString != null) {
+        DateTime startDate = DateTime.parse(startTimeString).toLocal();
+        DateTime endDate = DateTime.parse(endTimeString).toLocal();
+        DateTime initialNormalizedDate = normalizeDate(startDate);
+        DateTime finalNormalizedDate = normalizeDate(endDate);
+
+        // Adicionar evento ao mapa sem duplicação
+        groupedEvents.putIfAbsent(initialNormalizedDate, () => []).add(task);
+        if (initialNormalizedDate != finalNormalizedDate) {
+          groupedEvents.putIfAbsent(finalNormalizedDate, () => []).add(task);
+        }
+      } else {}
     }
 
     return groupedEvents;
@@ -130,53 +163,76 @@ class _CalendarPageState extends State<CalendarPage> {
               todayDecoration:
                   BoxDecoration(color: Colors.white54, shape: BoxShape.circle),
             ),
-            calendarBuilders: CalendarBuilders(
-              dowBuilder: (context, day) {
-                String text;
-                switch (day.weekday) {
-                  case DateTime.sunday:
-                    text = 'dom';
-                    break;
-                  case DateTime.monday:
-                    text = 'seg';
-                    break;
-                  case DateTime.tuesday:
-                    text = 'ter';
-                    break;
-                  case DateTime.wednesday:
-                    text = 'qua';
-                    break;
-                  case DateTime.thursday:
-                    text = 'qui';
-                    break;
-                  case DateTime.friday:
-                    text = 'sex';
-                    break;
-                  case DateTime.saturday:
-                    text = 'sab';
-                    break;
-                  default:
-                    text = 'Error';
-                }
-                return Center(child: Text(text));
-              },
-              markerBuilder: (context, date, events) {
-                if (events.isNotEmpty) {
-                  return Positioned(
-                    bottom: 1,
-                    child: Container(
-                      width: 6,
-                      height: 6,
-                      decoration: const BoxDecoration(
-                        color: Colors.blue,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                  );
-                }
-                return const SizedBox.shrink();
-              },
-            ),
+            calendarBuilders: CalendarBuilders(dowBuilder: (context, day) {
+              String text;
+              switch (day.weekday) {
+                case DateTime.sunday:
+                  text = 'dom';
+                  break;
+                case DateTime.monday:
+                  text = 'seg';
+                  break;
+                case DateTime.tuesday:
+                  text = 'ter';
+                  break;
+                case DateTime.wednesday:
+                  text = 'qua';
+                  break;
+                case DateTime.thursday:
+                  text = 'qui';
+                  break;
+                case DateTime.friday:
+                  text = 'sex';
+                  break;
+                case DateTime.saturday:
+                  text = 'sab';
+                  break;
+                default:
+                  text = 'Error';
+              }
+              return Center(child: Text(text));
+            },
+                // Local onde exibe a bolinha de cor no calendário
+                markerBuilder: (context, day, events) {
+              if (events.isNotEmpty) {
+                return Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: events.map<Widget>((event) {
+                    var userId = (event as Map<String, dynamic>)['assigned_to'];
+                    if (userId != null) {
+                      return FutureBuilder<Color?>(
+                        future: colorManager.getUserColor(userId),
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState ==
+                                  ConnectionState.done &&
+                              snapshot.hasData) {
+                            Color? userColor = snapshot.data;
+                            return Container(
+                              margin: const EdgeInsets.symmetric(
+                                  horizontal:
+                                      0.5), // Espaçamento entre as bolinhas
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                color: userColor ?? Colors.grey,
+                                shape: BoxShape.circle,
+                              ),
+                            );
+                          } else {
+                            return Container(); // Placeholder enquanto carrega
+                          }
+                        },
+                      );
+                    } else {
+                      return Container(); // Placeholder se o userId for nulo
+                    }
+                  }).toList(),
+                );
+              }
+
+              // Retorna um valor padrão se não houver eventos
+              return Container();
+            }),
           ),
           const SizedBox(height: 8.0),
           Expanded(
@@ -186,51 +242,133 @@ class _CalendarPageState extends State<CalendarPage> {
                     itemCount: _selectedEvents.length,
                     itemBuilder: (context, index) {
                       final event = _selectedEvents[index];
+                      var userId = event['assigned_to'];
                       final startTime = event['start_time'];
                       final endTime = event['end_time'];
+
                       // Formatação das horas (apenas se houver 'dateTime' nos eventos)
                       String startFormatted =
                           startTime != null ? formatTime(startTime) : '';
                       String endFormatted =
                           endTime != null ? formatTime(endTime) : '';
-                      return Container(
-                        //Espaçamento entre as tarefas no list view
-                        margin: const EdgeInsets.only(bottom: 8),
 
-                        decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(15),
-                            color: Colors.grey.shade700),
-                        child: ListTile(
-                          dense: true,
-                          title: Text(
-                            event['title'] ?? 'Sem título',
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 2.5,
-                                fontSize: 16),
-                          ),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              if (event['description'] != null &&
-                                  event['description']!.isNotEmpty)
-                                Text(
-                                  event[
-                                      'description'], // Mostra a descrição se houver
-                                  style: const TextStyle(color: Colors.white54),
-                                ),
-                              Text(
-                                '$startFormatted - $endFormatted', // Mostra a hora de início e fim
-                                style: const TextStyle(color: Colors.white54),
+                      // FutureBuilder para carregar a cor e o nome do usuário
+                      return FutureBuilder<Color?>(
+                        future: colorManager.getUserColor(userId),
+                        builder: (context, snapshotColor) {
+                          if (snapshotColor.hasError) {
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 8),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(15),
+                                color: Colors
+                                    .red, // Exibe uma cor diferente em caso de erro
                               ),
-                            ],
-                          ),
-                        ),
+                              child: const ListTile(
+                                title: Text('Erro ao carregar cor',
+                                    style: TextStyle(color: Colors.white)),
+                              ),
+                            );
+                          }
+
+                          Color? userColor = snapshotColor.data ?? Colors.grey;
+
+                          // FutureBuilder para carregar o nome do usuário
+                          return FutureBuilder<String?>(
+                            future: getUserName.getUserName(
+                                userId), // Aqui usamos FutureBuilder para o nome
+                            builder: (context, snapshotName) {
+                              if (snapshotName.connectionState ==
+                                  ConnectionState.waiting) {
+                                return Container(
+                                  margin: const EdgeInsets.only(bottom: 8),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(15),
+                                    color: userColor,
+                                  ),
+                                  child: const ListTile(
+                                    title: Text('Carregando...',
+                                        style: TextStyle(color: Colors.white)),
+                                  ),
+                                );
+                              }
+
+                              if (snapshotName.hasError ||
+                                  !snapshotName.hasData) {
+                                return Container(
+                                  margin: const EdgeInsets.only(bottom: 8),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(15),
+                                    color: userColor,
+                                  ),
+                                  child: const ListTile(
+                                    title: Text('Erro ao carregar nome',
+                                        style: TextStyle(color: Colors.white)),
+                                  ),
+                                );
+                              }
+
+                              String? userName =
+                                  snapshotName.data ?? 'Usuário Desconhecido';
+
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 8),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(15),
+                                  color: userColor,
+                                ),
+                                child: ExpansionTile(
+                                  leading: const SizedBox(
+                                    width: 30
+                                  ),
+                                  dense: true,
+                                  title: Align(
+                                    alignment: Alignment.center,
+                                    child: Text(
+                                      userName,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        letterSpacing: 2.5,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ),
+                                  children: [
+                                    Align(
+                                      alignment: Alignment.center,
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(0.0),
+                                        child: Column(
+                                          children: [
+                                            if (event['description'] != null &&
+                                                event['description']!
+                                                    .isNotEmpty)
+                                              Text(event['title']),
+                                            Text(
+                                              event['description'],
+                                              style: const TextStyle(
+                                                  color: Colors.white54),
+                                            ),
+                                            Text(
+                                              '$startFormatted - $endFormatted', // Mostra a hora de início e fim
+                                              style: const TextStyle(
+                                                  color: Colors.white54),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          );
+                        },
                       );
                     },
                   ),
-          ),
+          )
         ],
       ),
       floatingActionButton: FloatingActionButton(
