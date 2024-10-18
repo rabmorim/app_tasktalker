@@ -8,7 +8,6 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
 
-final now = DateTime.now();
 DateTime? _selectedDay;
 DateTime _focusedDay = DateTime.now();
 
@@ -190,6 +189,38 @@ class _CalendarPageState extends State<CalendarPage> {
                 default:
                   text = 'Error';
               }
+              _selectedEvents.sort((a, b) {
+                // Converta as strings armazenadas no Firestore em objetos DateTime
+                DateTime startA = DateTime.parse(a['start_time']);
+                DateTime startB = DateTime.parse(b['start_time']);
+
+                return startA.compareTo(startB);
+              });
+
+            // Listas para separar tarefas passadas e futuras
+              List<Map<String, dynamic>> passedTasks = [];
+              List<Map<String, dynamic>> upcomingTasks = [];
+              DateTime now = DateTime.now().toLocal();
+
+              for (var event in _selectedEvents) {
+                // Converta as strings para DateTime antes de comparar
+                // DateTime startTime = DateTime.parse(event['start_time']);
+                DateTime endTime = DateTime.parse(event['end_time']);
+          
+                // Verifica se a tarefa já terminou
+                if (endTime.isBefore(now)) {
+                  passedTasks.add(event);
+                } else {
+                  upcomingTasks.add(event);
+                }
+              }
+
+          // Combina as listas: tarefas futuras primeiro, seguidas das passadas
+              _selectedEvents = [...upcomingTasks, ...passedTasks];
+
+          // Debugging para imprimir o resultado final
+              // print('Lista final ordenada: $_selectedEvents');
+
               return Center(child: Text(text));
             },
                 // Local onde exibe a bolinha de cor no calendário
@@ -237,7 +268,9 @@ class _CalendarPageState extends State<CalendarPage> {
           const SizedBox(height: 8.0),
           Expanded(
             child: _selectedEvents.isEmpty
-                ? const Center(child: Text('Nenhum evento'))
+                ? const Center(
+                    child: Text('Nenhum evento'),
+                  )
                 : ListView.builder(
                     itemCount: _selectedEvents.length,
                     itemBuilder: (context, index) {
@@ -318,9 +351,7 @@ class _CalendarPageState extends State<CalendarPage> {
                                   color: userColor,
                                 ),
                                 child: ExpansionTile(
-                                  leading: const SizedBox(
-                                    width: 30
-                                  ),
+                                  leading: const SizedBox(width: 30),
                                   dense: true,
                                   title: Align(
                                     alignment: Alignment.center,
