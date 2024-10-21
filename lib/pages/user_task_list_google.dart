@@ -52,7 +52,7 @@ class _UserTaskListGoogleState extends State<UserTaskListGoogle> {
         _isLoading = false;
       });
     } catch (e) {
-      print('Erro ao buscar tarefas: $e');
+      // print('Erro ao buscar tarefas: $e');
       setState(() {
         _isLoading = false;
       });
