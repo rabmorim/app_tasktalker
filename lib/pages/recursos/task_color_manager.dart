@@ -8,11 +8,12 @@ class TaskColorManager {
   // Gera cor aleatória
   Color getRandomColor() {
     Random random = Random();
+    int maxChannelValue = 100;
     return Color.fromARGB(
       150, // Opacidade
-      random.nextInt(256), // Red
-      random.nextInt(256), // Green
-      random.nextInt(256), // Blue
+      random.nextInt(maxChannelValue), // Red
+      random.nextInt(maxChannelValue), // Green
+      random.nextInt(maxChannelValue), // Blue
     );
   }
 

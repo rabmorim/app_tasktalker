@@ -34,7 +34,7 @@ class _ModalFormState extends State<ModalForm> {
 
   // Variável para armazenar o usuário selecionado (a quem a tarefa será delegada)
   String? selectedUser;
-  
+
   @override
   void dispose() {
     // Lembre-se de limpar os controladores para evitar vazamento de memória
@@ -178,6 +178,12 @@ class _ModalFormState extends State<ModalForm> {
                           descriptionTextField.text,
                           dateTimeInitial,
                           dateTimeEnd);
+                      // ignore: use_build_context_synchronously
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Evento adicionado com sucesso!'),
+                        ),
+                      );
                     } else {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
