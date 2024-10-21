@@ -52,7 +52,7 @@ class TaskNotificationManager {
 
         // Se a tarefa ainda não começou e está dentro do tempo de 5 minutos
         if (taskStartTime.isAfter(now) &&
-            taskStartTime.difference(now).inMinutes <= 2) {
+            taskStartTime.difference(now).inMinutes >= 4 && taskStartTime.difference(now).inMinutes < 5) {
           showNotification(
               taskData['title'], taskData['description'], taskStartTime);
         }

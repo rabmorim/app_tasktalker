@@ -197,7 +197,7 @@ class _CalendarPageState extends State<CalendarPage> {
                 return startA.compareTo(startB);
               });
 
-            // Listas para separar tarefas passadas e futuras
+              // Listas para separar tarefas passadas e futuras
               List<Map<String, dynamic>> passedTasks = [];
               List<Map<String, dynamic>> upcomingTasks = [];
               DateTime now = DateTime.now().toLocal();
@@ -206,7 +206,7 @@ class _CalendarPageState extends State<CalendarPage> {
                 // Converta as strings para DateTime antes de comparar
                 // DateTime startTime = DateTime.parse(event['start_time']);
                 DateTime endTime = DateTime.parse(event['end_time']);
-          
+
                 // Verifica se a tarefa já terminou
                 if (endTime.isBefore(now)) {
                   passedTasks.add(event);
@@ -215,12 +215,8 @@ class _CalendarPageState extends State<CalendarPage> {
                 }
               }
 
-          // Combina as listas: tarefas futuras primeiro, seguidas das passadas
+              // Combina as listas: tarefas futuras primeiro, seguidas das passadas
               _selectedEvents = [...upcomingTasks, ...passedTasks];
-
-          // Debugging para imprimir o resultado final
-              // print('Lista final ordenada: $_selectedEvents');
-
               return Center(child: Text(text));
             },
                 // Local onde exibe a bolinha de cor no calendário
@@ -305,6 +301,14 @@ class _CalendarPageState extends State<CalendarPage> {
                           }
 
                           Color? userColor = snapshotColor.data ?? Colors.grey;
+                          // Verificar se o evento já terminou
+                          DateTime now = DateTime.now();
+                          DateTime endTime = DateTime.parse(event['end_time']);
+                          bool isExpired = endTime.isBefore(now);
+
+                          // Definir cor de fundo com base na expiração
+                          Color backgroundColor =
+                              isExpired ? Colors.white.withOpacity(0.8) : userColor;
 
                           // FutureBuilder para carregar o nome do usuário
                           return FutureBuilder<String?>(
@@ -317,7 +321,7 @@ class _CalendarPageState extends State<CalendarPage> {
                                   margin: const EdgeInsets.only(bottom: 8),
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(15),
-                                    color: userColor,
+                                    color: backgroundColor,
                                   ),
                                   child: const ListTile(
                                     title: Text('Carregando...',
@@ -340,30 +344,40 @@ class _CalendarPageState extends State<CalendarPage> {
                                   ),
                                 );
                               }
-
+                              //Pegando o nome do usuário
                               String? userName =
                                   snapshotName.data ?? 'Usuário Desconhecido';
+
+                              // Definir estilo do nome com riscado se expirado
+                              TextStyle userNameStyle = isExpired
+                                  ? const TextStyle(
+                                      color: Colors.black,
+                                      decoration: TextDecoration
+                                          .lineThrough, // Nome riscado
+                                      decorationThickness:
+                                          2, // Espessura da linha
+                                      fontSize: 14,
+                                      decorationColor: Colors.black
+                                    )
+                                  : const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 2.5,
+                                      fontSize: 14,
+                                    );
 
                               return Container(
                                 margin: const EdgeInsets.only(bottom: 8),
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(15),
-                                  color: userColor,
+                                  color: backgroundColor,
                                 ),
                                 child: ExpansionTile(
                                   leading: const SizedBox(width: 30),
                                   dense: true,
                                   title: Align(
                                     alignment: Alignment.center,
-                                    child: Text(
-                                      userName,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                        letterSpacing: 2.5,
-                                        fontSize: 14,
-                                      ),
-                                    ),
+                                    child: Text(userName.toUpperCase(), style: userNameStyle),
                                   ),
                                   children: [
                                     Align(
@@ -375,16 +389,15 @@ class _CalendarPageState extends State<CalendarPage> {
                                             if (event['description'] != null &&
                                                 event['description']!
                                                     .isNotEmpty)
-                                              Text(event['title']),
-                                            Text(
-                                              event['description'],
-                                              style: const TextStyle(
-                                                  color: Colors.white54),
-                                            ),
+                                              Text(
+                                                event['title'],
+                                                style: userNameStyle,
+                                              ),
+                                            Text(event['description'],
+                                                style: userNameStyle),
                                             Text(
                                               '$startFormatted - $endFormatted', // Mostra a hora de início e fim
-                                              style: const TextStyle(
-                                                  color: Colors.white54),
+                                              style: userNameStyle,
                                             ),
                                           ],
                                         ),

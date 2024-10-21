@@ -2,9 +2,10 @@
     package="com.chatapp.com">
 
     <uses-permission android:name="android.permission.INTERNET"/>
-    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/> <!-- Permissão para notificação após reiniciar -->
     <uses-permission android:name="android.permission.VIBRATE"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <uses-permission android:name="android.permission.GET_ACCOUNTS" />
+
     
     <application
         android:label="app_mensagem"
@@ -41,13 +42,13 @@
         </service>
 
         <!-- Serviço de notificações persistentes -->
-        <receiver android:enabled="true" android:exported="false"
+        <receiver android:enabled="true" android:exported="true"
             android:name="com.dexterous.flutterlocalnotifications.receivers.NotificationReceiver" />
         
-        <receiver android:enabled="true" android:exported="false"
+        <receiver android:enabled="true" android:exported="true"
             android:name="com.dexterous.flutterlocalnotifications.receivers.ActionReceiver" />
 
-        <receiver android:enabled="true" android:exported="false"
+        <receiver android:enabled="true" android:exported="true"
             android:name="com.dexterous.flutterlocalnotifications.receivers.DismissedReceiver" />
         
         <receiver
