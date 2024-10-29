@@ -37,8 +37,8 @@ class AuthService extends ChangeNotifier {
   }
 
   //Criar novo usuário
-  Future<UserCredential> signUpWithEmailAndPassword(
-      String email, String password, String userName) async {
+  Future<UserCredential> signUpWithEmailAndPassword(String email,
+      String password, String userName, String codeEnterprise) async {
     try {
       UserCredential userCredential =
           await _firebaseAuth.createUserWithEmailAndPassword(
@@ -51,15 +51,26 @@ class AuthService extends ChangeNotifier {
       String colorHex =
           '#${userColor.value.toRadixString(16).padLeft(8, '0').toUpperCase()}';
 
-      //Depois de criar o usuário, criar um documento para o usuário na coleção
-      _firestore.collection('users').doc(userCredential.user!.uid).set(
-        {
-          'uid': userCredential.user!.uid,
-          'email': email,
-          'userName': userName,
-          'color': colorHex
-        },
-      );
+      // Obter o documento da empresa com base no código da empresa
+      DocumentSnapshot enterpriseSnapshot =
+          await _firestore.collection('enterprise').doc(codeEnterprise).get();
+
+      if (!enterpriseSnapshot.exists) {
+        throw Exception('Empresa não encontrada');
+      }
+
+      // Criar um novo usuário na subcoleção 'users' dentro da empresa correta
+      await _firestore
+          .collection('enterprise')
+          .doc(codeEnterprise)
+          .collection('users')
+          .doc(userCredential.user!.uid)
+          .set({
+        'uid': userCredential.user!.uid,
+        'email': email,
+        'userName': userName,
+        'color': colorHex,
+      });
 
       return userCredential;
     } on FirebaseAuthException catch (e) {
@@ -93,6 +104,29 @@ class AuthService extends ChangeNotifier {
       }
     }
     return false; // Se nenhum documento tiver o nome de usuário
+  }
+
+  // Método para Verificação do codigo de empresa
+  Future<bool> verifyEnterprise(String code) async {
+    CollectionReference enterprise =
+        FirebaseFirestore.instance.collection('enterprise');
+
+    // Garantir que o código da empresa não tenha espaços em branco e esteja em minúsculas
+    String cleanedEnterprise = code.trim().toLowerCase();
+
+    QuerySnapshot querySnapshot = await enterprise.get();
+
+    ///
+
+    for (var doc in querySnapshot.docs) {
+      var data = doc.data() as Map<String, dynamic>?;
+      String? storedEnterprise = data?["code"]?.toString().trim().toLowerCase();
+
+      if (storedEnterprise == cleanedEnterprise) {
+        return true; // Retorna true se encontrar a empresa
+      }
+    }
+    return false; // Se não tiver a empresa
   }
 
   //Método usado para conectar-se com a conta do google

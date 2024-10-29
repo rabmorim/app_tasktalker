@@ -3,7 +3,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:app_mensagem/pages/chat_page.dart';
 
-//Pegando a instância do firebase auth
 final FirebaseAuth _auth = FirebaseAuth.instance;
 
 class BuildUserList extends StatefulWidget {
@@ -14,12 +13,57 @@ class BuildUserList extends StatefulWidget {
 }
 
 class _BuildUserListState extends State<BuildUserList> {
-  //Fazendo a busca da instância na coleção 'users' na Firestore, tratando possiveis erros , loading e
-  //retornando o resultado e transformando em Map no formato de widget
+  String? _userCompanyCode;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchUserCompanyCode();
+  }
+
+  // Método para buscar o código da empresa do usuário logado
+  Future<void> _fetchUserCompanyCode() async {
+    try {
+      // Obtenha o UID do usuário atual
+      final currentUserId = _auth.currentUser?.uid;
+      if (currentUserId == null) return;
+
+      // Consultar a coleção `enterprise` para encontrar o documento que contém o usuário logado na subcoleção `users`
+      QuerySnapshot enterpriseSnapshot =
+          await FirebaseFirestore.instance.collection('enterprise').get();
+
+      for (var doc in enterpriseSnapshot.docs) {
+        var usersCollection = await doc.reference.collection('users').get();
+
+        if (usersCollection.docs
+            .any((userDoc) => userDoc.id == currentUserId)) {
+          setState(() {
+            _userCompanyCode = doc.id; // Armazenar o código da empresa
+          });
+          break;
+        }
+      }
+    } catch (e) {
+      print("Erro ao buscar código da empresa: $e");
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (_userCompanyCode == null) {
+      return const Center(
+        child: CircularProgressIndicator(
+          color: Colors.white,
+        ),
+      );
+    }
+
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance.collection('users').snapshots(),
+      stream: FirebaseFirestore.instance
+          .collection('enterprise')
+          .doc(_userCompanyCode)
+          .collection('users')
+          .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           return const Text('error');
@@ -35,7 +79,6 @@ class _BuildUserListState extends State<BuildUserList> {
           children: snapshot.data!.docs
               .map<Widget>((doc) => _buildUserListItem(doc))
               .toList(),
-              
         );
       },
     );
@@ -44,7 +87,6 @@ class _BuildUserListState extends State<BuildUserList> {
   Widget _buildUserListItem(DocumentSnapshot document) {
     Map<String, dynamic> data = document.data()! as Map<String, dynamic>;
 
-    //Mostrar todos os usuarios exceto o que está presente
     if (_auth.currentUser!.uid != data['uid']) {
       return Column(
         children: [
@@ -62,7 +104,6 @@ class _BuildUserListState extends State<BuildUserList> {
               titleAlignment: ListTileTitleAlignment.center,
               title: Text(data['userName']),
               onTap: () {
-                //Vai para a pagina de chat
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -80,10 +121,7 @@ class _BuildUserListState extends State<BuildUserList> {
         ],
       );
     } else {
-      //Retornar um container em branco
       return const SizedBox();
     }
   }
-
-  
 }
