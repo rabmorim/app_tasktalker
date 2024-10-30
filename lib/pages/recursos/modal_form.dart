@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:app_mensagem/pages/recursos/button.dart';
 import 'package:app_mensagem/pages/recursos/data_time_field.dart';
 import 'package:app_mensagem/pages/recursos/text_field.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 // import 'package:google_sign_in/google_sign_in.dart';
 import 'package:intl/intl.dart';
@@ -315,7 +316,8 @@ class _ModalFormState extends State<ModalForm> {
   //   }
   // }
 
-  // Função para delegar a tarefa para o Firestore
+  ///////////////////////
+  /// Método para delegar a tarefa para o Firestore
   Future<void> delegateTaskToUser(
     String userId,
     String title,
@@ -323,15 +325,32 @@ class _ModalFormState extends State<ModalForm> {
     DateTime startTime,
     DateTime endTime,
   ) async {
-    await FirebaseFirestore.instance.collection('tasks').add(
-      {
-        'assigned_to': userId,
-        'title': title,
-        'description': description,
-        'start_time': startTime.toIso8601String(),
-        'end_time': endTime.toIso8601String(),
-        'created_at': DateTime.now().toIso8601String(),
-      },
-    );
+    String uid = FirebaseAuth.instance.currentUser!.uid;
+
+    // Busca o código da empresa do usuário autenticado na coleção global de usuários
+    DocumentSnapshot userDoc =
+        await FirebaseFirestore.instance.collection('users').doc(uid).get();
+
+    if (userDoc.exists) {
+      String enterpriseCode = userDoc['code'];
+
+      // Adiciona a tarefa na subcoleção 'tasks' dentro da empresa do usuário autenticado
+      await FirebaseFirestore.instance
+          .collection('enterprise')
+          .doc(enterpriseCode)
+          .collection('tasks')
+          .add(
+        {
+          'assigned_to': userId,
+          'title': title,
+          'description': description,
+          'start_time': startTime.toIso8601String(),
+          'end_time': endTime.toIso8601String(),
+          'created_at': DateTime.now().toIso8601String(),
+        },
+      );
+    } else {
+      throw Exception("Empresa do usuário não encontrada.");
+    }
   }
 }

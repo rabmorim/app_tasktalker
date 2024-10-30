@@ -13,7 +13,8 @@ class AuthService extends ChangeNotifier {
   //Instancia do firestore
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  //Fazer login do usuário
+  ////////////////////
+  /// Método para fazer login do usuário
   Future<UserCredential> signInWithEmailAndPassword(
       String email, String password, String userName) async {
     try {
@@ -36,7 +37,8 @@ class AuthService extends ChangeNotifier {
     }
   }
 
-  //Criar novo usuário
+  //////////////////////////
+  /// Método para criar novo usuário
   Future<UserCredential> signUpWithEmailAndPassword(String email,
       String password, String userName, String codeEnterprise) async {
     try {
@@ -53,7 +55,7 @@ class AuthService extends ChangeNotifier {
 
       // Obter o documento da empresa com base no código da empresa
       DocumentSnapshot enterpriseSnapshot =
-          await _firestore.collection('enterprise').doc(codeEnterprise).get();
+          await _firestore.collection('enterprise').doc(codeEnterprise.toLowerCase()).get();
 
       if (!enterpriseSnapshot.exists) {
         throw Exception('Empresa não encontrada');
@@ -62,7 +64,7 @@ class AuthService extends ChangeNotifier {
       // Criar um novo usuário na subcoleção 'users' dentro da empresa correta
       await _firestore
           .collection('enterprise')
-          .doc(codeEnterprise)
+          .doc(codeEnterprise.toLowerCase())
           .collection('users')
           .doc(userCredential.user!.uid)
           .set({
@@ -72,18 +74,31 @@ class AuthService extends ChangeNotifier {
         'color': colorHex,
       });
 
+      //Cria o usuário também na coleçao global 'users'
+      await _firestore.collection('users').doc(userCredential.user!.uid).set(
+        {
+          'uid': userCredential.user!.uid,
+          'email': email,
+          'userName': userName,
+          'color': colorHex,
+          'code': codeEnterprise.toLowerCase()
+        }
+      );
+
       return userCredential;
     } on FirebaseAuthException catch (e) {
       throw Exception(e.code);
     }
   }
 
-  // Log out do usuário
+  ////////////////////////
+  /// Método  Log out do usuário
   Future<void> signOut() async {
     return await FirebaseAuth.instance.signOut();
   }
 
-// Método para Verificação do usuário
+  /////////////////////////
+  /// Método para Verificação do usuário
   Future<bool> verifyUser(String username) async {
     CollectionReference users = FirebaseFirestore.instance.collection('users');
 
@@ -106,7 +121,8 @@ class AuthService extends ChangeNotifier {
     return false; // Se nenhum documento tiver o nome de usuário
   }
 
-  // Método para Verificação do codigo de empresa
+  //////////////////////
+  /// Método para Verificação do codigo de empresa
   Future<bool> verifyEnterprise(String code) async {
     CollectionReference enterprise =
         FirebaseFirestore.instance.collection('enterprise');
@@ -129,7 +145,8 @@ class AuthService extends ChangeNotifier {
     return false; // Se não tiver a empresa
   }
 
-  //Método usado para conectar-se com a conta do google
+  ///////////////////
+  /// Método usado para conectar-se com a conta do google
   Future connectGoogleAccount() async {
     String validou = 'Google Conectado com Sucesso.';
     String invalidou = 'Erro ao conectar ao google';

@@ -4,9 +4,10 @@ import 'package:app_mensagem/pages/recursos/get_user.dart';
 import 'package:app_mensagem/pages/recursos/modal_form.dart';
 import 'package:app_mensagem/pages/recursos/task_color_manager.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:table_calendar/table_calendar.dart'; 
+import 'package:table_calendar/table_calendar.dart';
 
 DateTime? _selectedDay;
 DateTime _focusedDay = DateTime.now();
@@ -31,23 +32,37 @@ class _CalendarPageState extends State<CalendarPage> {
     loadFirestoreTasks();
   }
 
+  ///////////////////
+  /// Método para carregar as tarefas do firestore
   Future<void> loadFirestoreTasks() async {
-    QuerySnapshot snapshot =
-        await FirebaseFirestore.instance.collection('tasks').get();
-    List<Map<String, dynamic>> tasks =
-        snapshot.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
-
-    // Carregar cores dos usuários
+    String? uid = FirebaseAuth.instance.currentUser!.uid;
+    DocumentSnapshot userDoc =
+        await FirebaseFirestore.instance.collection('users').doc(uid).get();
+    if (userDoc.exists) {
+      String enterpriseCode = userDoc['code'];
+      // Busca as tarefas da subcoleção 'tasks' dentro do documento da empresa do usuário
+      QuerySnapshot snapshot = await FirebaseFirestore.instance
+          .collection('enterprise')
+          .doc(enterpriseCode)
+          .collection('tasks')
+          .get();
+      List<Map<String, dynamic>> tasks = snapshot.docs
+          .map((doc) => doc.data() as Map<String, dynamic>)
+          .toList();
+            // Carregar cores dos usuários
     for (var task in tasks) {
       String userId = task['assigned_to'];
+      
       // Pega o documento do usuário para obter a cor
-      DocumentSnapshot userDoc = await FirebaseFirestore.instance
+      DocumentSnapshot assignedUserDoc = await FirebaseFirestore.instance
+          .collection('enterprise')
+          .doc(enterpriseCode)
           .collection('users')
           .doc(userId)
           .get();
-      if (userDoc.exists) {
-        // Certifique-se que a cor existe no documento do usuário
-        String? userColorHex = userDoc['color'];
+
+      if (assignedUserDoc.exists) {
+        String? userColorHex = assignedUserDoc['color'];
 
         if (userColorHex != null) {
           // Converte a string hexadecimal em uma cor
@@ -68,7 +83,11 @@ class _CalendarPageState extends State<CalendarPage> {
         }
       },
     );
+  } else {
+    throw Exception("Empresa do usuário não encontrada.");
   }
+    }
+
 
 //Normalizar as datas
   DateTime normalizeDate(DateTime date) {
@@ -307,8 +326,9 @@ class _CalendarPageState extends State<CalendarPage> {
                           bool isExpired = endTime.isBefore(now);
 
                           // Definir cor de fundo com base na expiração
-                          Color backgroundColor =
-                              isExpired ? Colors.white.withOpacity(0.8) : userColor;
+                          Color backgroundColor = isExpired
+                              ? Colors.white.withOpacity(0.8)
+                              : userColor;
 
                           // FutureBuilder para carregar o nome do usuário
                           return FutureBuilder<String?>(
@@ -357,8 +377,7 @@ class _CalendarPageState extends State<CalendarPage> {
                                       decorationThickness:
                                           2, // Espessura da linha
                                       fontSize: 14,
-                                      decorationColor: Colors.black
-                                    )
+                                      decorationColor: Colors.black)
                                   : const TextStyle(
                                       color: Colors.white,
                                       fontWeight: FontWeight.bold,
@@ -377,7 +396,8 @@ class _CalendarPageState extends State<CalendarPage> {
                                   dense: true,
                                   title: Align(
                                     alignment: Alignment.center,
-                                    child: Text(userName.toUpperCase(), style: userNameStyle),
+                                    child: Text(userName.toUpperCase(),
+                                        style: userNameStyle),
                                   ),
                                   children: [
                                     Align(

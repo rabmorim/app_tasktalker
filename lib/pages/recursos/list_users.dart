@@ -44,7 +44,7 @@ class _BuildUserListState extends State<BuildUserList> {
         }
       }
     } catch (e) {
-      print("Erro ao buscar código da empresa: $e");
+     //
     }
   }
 

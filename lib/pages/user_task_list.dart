@@ -17,6 +17,7 @@ class UserTaskList extends StatefulWidget {
 class _UserTaskListState extends State<UserTaskList> {
   //Instãncia do usuario cadastrado (uid)
   final userId = FirebaseAuth.instance.currentUser?.uid;
+
   late List<Widget>
       _pages; // lista de páginas a serem renderizadas no TabBarView
   @override
@@ -26,6 +27,19 @@ class _UserTaskListState extends State<UserTaskList> {
       const UserTaskList(),
       const UserTaskListGoogle(),
     ];
+  }
+
+  //////////////////////
+  ///Método para buscar o código da empresa do usuário autenticado.
+  Future<String?> getCompanyCode() async {
+    DocumentSnapshot userDoc =
+        await FirebaseFirestore.instance.collection('users').doc(userId).get();
+
+    if (userDoc.exists) {
+      return userDoc['code'];
+    } else {
+      return null;
+    }
   }
 
   @override
@@ -56,18 +70,9 @@ class _UserTaskListState extends State<UserTaskList> {
         ),
         body: TabBarView(
           children: [
-            StreamBuilder(
-              stream: FirebaseFirestore.instance
-                  .collection('tasks')
-                  .where('assigned_to', isEqualTo: userId)
-                  .snapshots(),
+            FutureBuilder<String?>(
+              future: getCompanyCode(),
               builder: (context, snapshot) {
-                //Verificação de erros
-                if (snapshot.hasError) {
-                  return const Center(
-                    child: Text('Error ao carregar as tarefas'),
-                  );
-                }
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(
                     child: CircularProgressIndicator(
@@ -75,85 +80,109 @@ class _UserTaskListState extends State<UserTaskList> {
                     ),
                   );
                 }
-                if (snapshot.data!.docs.isEmpty) {
+
+                if (!snapshot.hasData || snapshot.data == null) {
                   return const Center(
-                    child: Text('Nenhuma Tarefa Existente'),
+                    child: Text('Erro ao carregar a empresa do usuário'),
                   );
                 }
-                return ListView(
-                  children: snapshot.data!.docs.map(
-                    (task) {
-                      Map<String, dynamic> data = task.data();
-                      //Tratando como String a data, por estar armazenado desta forma no Firestore
-                      final String? startTime = data['start_time'];
-                      final String? endTime = data['end_time'];
 
-                      // Formatação das horas
-                      String startFormatted =
-                          startTime != null ? formatTime(startTime) : '';
-                      String endFormatted =
-                          endTime != null ? formatTime(endTime) : '';
+                final enterpriseCode = snapshot.data;
 
-                      //Formação de Datas
-                      String dateFormatInitial = startTime != null ? formatDate(startTime): '';
-
-                      String dateFormatFinal = startTime != null ? formatDate(startTime): '';
-
-                      return Column(
-                        children: [
-                          const SizedBox(
-                            height: 5,
-                          ),
-                          Container(
-                            decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(10),
-                                color:
-                                    const Color.fromARGB(255, 116, 111, 111)),
-                            child: ListTile(
-                              title: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text(
-                                    data['title'] ?? 'Tarefa sem Título',
-                                    style: const TextStyle(
-                                      fontSize: 20,
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              subtitle: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text(
-                                    data['description'] ?? 'Sem Descrição',
-                                    style:
-                                        const TextStyle(color: Colors.white54),
-                                  ),
-                                  Text(
-                                    "$startFormatted - $endFormatted",
-                                    style:
-                                        const TextStyle(color: Colors.white54),
-                                  ),
-                                  Text(
-                                    "Inicio: $dateFormatInitial - Fim: $dateFormatFinal",
-                                    style: const TextStyle(
-                                      color: Colors.white54
-                                    ),
-                                  )
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
+                return StreamBuilder(
+                  stream: FirebaseFirestore.instance
+                      .collection('enterprise')
+                      .doc(enterpriseCode)
+                      .collection('tasks')
+                      .where('assigned_to', isEqualTo: userId)
+                      .snapshots(),
+                  builder: (context, snapshot) {
+                    if (snapshot.hasError) {
+                      return const Center(
+                        child: Text('Erro ao carregar as tarefas'),
                       );
-                    },
-                  ).toList(),
+                    }
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(
+                        child: CircularProgressIndicator(
+                          color: Colors.white54,
+                        ),
+                      );
+                    }
+                    if (snapshot.data!.docs.isEmpty) {
+                      return const Center(
+                        child: Text('Nenhuma Tarefa Existente'),
+                      );
+                    }
+                    return ListView(
+                      children: snapshot.data!.docs.map(
+                        (task) {
+                          Map<String, dynamic> data = task.data();
+                          final String? startTime = data['start_time'];
+                          final String? endTime = data['end_time'];
+
+                          String startFormatted =
+                              startTime != null ? formatTime(startTime) : '';
+                          String endFormatted =
+                              endTime != null ? formatTime(endTime) : '';
+                          String dateFormatInitial =
+                              startTime != null ? formatDate(startTime) : '';
+                          String dateFormatFinal =
+                              endTime != null ? formatDate(endTime) : '';
+
+                          return Column(
+                            children: [
+                              const SizedBox(height: 5),
+                              Container(
+                                decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(10),
+                                    color: const Color.fromARGB(
+                                        255, 116, 111, 111)),
+                                child: ListTile(
+                                  title: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        data['title'] ?? 'Tarefa sem Título',
+                                        style: const TextStyle(
+                                          fontSize: 20,
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  subtitle: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        data['description'] ?? 'Sem Descrição',
+                                        style: const TextStyle(
+                                            color: Colors.white54),
+                                      ),
+                                      Text(
+                                        "$startFormatted - $endFormatted",
+                                        style: const TextStyle(
+                                            color: Colors.white54),
+                                      ),
+                                      Text(
+                                        "Inicio: $dateFormatInitial - Fim: $dateFormatFinal",
+                                        style: const TextStyle(
+                                            color: Colors.white54),
+                                      )
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ).toList(),
+                    );
+                  },
                 );
               },
             ),
-            //segunda aba com a lista de páginas
             _pages[1],
           ],
         ),
@@ -163,21 +192,21 @@ class _UserTaskListState extends State<UserTaskList> {
           unselectedItemColor: Colors.white,
           iconSize: 24,
           onTap: (value) {
-          if(value == 0){
+            if (value == 0) {
               Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const HomePage(),
-              ),
-            );
-          }else{
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const CalendarPage(),
-              ),
-            );
-          }
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const HomePage(),
+                ),
+              );
+            } else {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const CalendarPage(),
+                ),
+              );
+            }
           },
           items: const [
             BottomNavigationBarItem(
@@ -185,20 +214,21 @@ class _UserTaskListState extends State<UserTaskList> {
               label: 'Home',
             ),
             BottomNavigationBarItem(
-                icon: FaIcon(FontAwesomeIcons.calendar), label: 'Calendário')
+              icon: FaIcon(FontAwesomeIcons.calendar),
+              label: 'Calendário',
+            )
           ],
         ),
       ),
     );
   }
 
-  //Formatar a hora para impressão no listview
   String formatTime(String dateTimeString) {
     DateTime dateTime = DateTime.parse(dateTimeString).toLocal();
-    return DateFormat('HH:mm')
-        .format(dateTime); // Formato de 24 horas (ex: 14:30)
+    return DateFormat('HH:mm').format(dateTime);
   }
-  String formatDate(String dateString){
+
+  String formatDate(String dateString) {
     DateTime dateFormat = DateTime.parse(dateString).toLocal();
     return DateFormat('dd/MM/yyyy').format(dateFormat);
   }

@@ -80,7 +80,8 @@ class _RegisterEnterpriseState extends State<RegisterEnterprise> {
       ),
     );
   }
-
+  /////////////////////
+  /// Método para cuidar do estado da mudança e digitação do CNPJ. Sempre que termina de digitar o CPNJ, ele é validado.
   void onCnpjChanged() {
     if (_cnpjController.text.length == 14) {
       if (validarCNPJ(_cnpjController.text)) {
@@ -114,7 +115,8 @@ class _RegisterEnterpriseState extends State<RegisterEnterprise> {
       }
     }
   }
-
+  ///////////////////////////
+  ///Método para validar o cnpj fornecido
   bool validarCNPJ(String cnpj) {
     // Remove caracteres especiais
     cnpj = cnpj.replaceAll(RegExp(r'\D'), '');
@@ -147,12 +149,13 @@ class _RegisterEnterpriseState extends State<RegisterEnterprise> {
     // Verifica se os dígitos calculados são iguais aos fornecidos
     return cnpj.endsWith('$digito1$digito2');
   }
-
+  ////////////////////
+  /// Método para criar a empresa no banco de dados
   Future<void> createEnterprise(String codigo, String cnpj) async {
     try {
-      await FirebaseFirestore.instance.collection('enterprise').doc(codigo).set(
+      await FirebaseFirestore.instance.collection('enterprise').doc(codigo.toLowerCase()).set(
         {
-          'code': codigo,
+          'code': codigo.toLowerCase(),
           'cnpj': cnpj,
           'created_at': DateTime.now().toIso8601String(),
         },
