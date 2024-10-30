@@ -66,37 +66,42 @@ class _RegisterEnterpriseState extends State<RegisterEnterprise> {
                         FirebaseFirestore.instance.collection('enterprise');
                     QuerySnapshot snapshot = await enterprises.get();
 
+                    bool isCnpjRegistered = false;
+
                     for (var doc in snapshot.docs) {
                       var data = doc.data() as Map<String, dynamic>?;
-                      String? cnpj = data?['cnpj'].toString().trim();
+                      String? cnpj = data?['cnpj'];
+
                       if (_cnpjController.text == cnpj) {
-                        setState(
-                          () {
-                            const snackBar = SnackBar(
-                              elevation: 0,
-                              behavior: SnackBarBehavior.floating,
-                              backgroundColor: Colors.transparent,
-                              content: AwesomeSnackbarContent(
-                                  title: 'Cnpj já cadastrado',
-                                  message: 'Favor cadastrar outro Cnpj',
-                                  contentType: ContentType.failure),
-                            );
-                            ScaffoldMessenger.of(context)
-                              ..hideCurrentSnackBar()
-                              ..showSnackBar(snackBar);
-                          },
-                        );
-                        return;
-                      } else {
-                        await createEnterprise(
-                            _codigoController.text, _cnpjController.text);
-                        // ignore: use_build_context_synchronously
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Empresa cadastrada com sucesso'),
-                          ),
-                        );
+                        isCnpjRegistered = true;
+
+                        setState(() {
+                          const snackBar = SnackBar(
+                            elevation: 0,
+                            behavior: SnackBarBehavior.floating,
+                            backgroundColor: Colors.transparent,
+                            content: AwesomeSnackbarContent(
+                                title: 'Cnpj já cadastrado',
+                                message: 'Favor cadastrar outro Cnpj',
+                                contentType: ContentType.failure),
+                          );
+                          ScaffoldMessenger.of(context)
+                            ..hideCurrentSnackBar()
+                            ..showSnackBar(snackBar);
+                        });
+                        break; // Interrompe o loop ao encontrar o CNPJ
                       }
+                    }
+
+                    if (!isCnpjRegistered) {
+                      await createEnterprise(
+                          _codigoController.text, _cnpjController.text);
+                      // ignore: use_build_context_synchronously
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Empresa cadastrada com sucesso'),
+                        ),
+                      );
                     }
                   },
                   text: 'Cadastrar Empresa',
