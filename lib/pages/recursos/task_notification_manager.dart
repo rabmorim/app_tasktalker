@@ -34,29 +34,38 @@ class TaskNotificationManager {
   /// Método para verificar tarefas e enviar notificações
   Future<void> checkAndSendNotifications() async {
     // Pega o usuário autenticado
-    User? currentUser = FirebaseAuth.instance.currentUser;
+    final String currentUser = FirebaseAuth.instance.currentUser!.uid;
 
-    if (currentUser != null) {
-      String userId = currentUser.uid;
-
+    //Pega o código da empresa do usuário cadastrado
+    DocumentSnapshot userDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(currentUser)
+        .get();
+    if (userDoc.exists) {
+      String enterpriseCode = userDoc['code'];
       // Consulta as tarefas do Firestore
       var snapshot = await FirebaseFirestore.instance
+          .collection('enterprise')
+          .doc(enterpriseCode)
           .collection('tasks')
-          .where('assigned_to', isEqualTo: userId)
-          .get(); //////////////////////////////////////////////////////////////// preciso alterar para envio correto de notificação
-
+          .get();
       var now = DateTime.now();
 
       // Percorre todas as tarefas do usuário
       for (var doc in snapshot.docs) {
         var taskData = doc.data();
-        DateTime taskStartTime = DateTime.parse(taskData['start_time']);
+        if (taskData['assigned_to'] == currentUser) {
+          DateTime taskStartTime = DateTime.parse(taskData['start_time']);
 
-        // Se a tarefa ainda não começou e está dentro do tempo de 5 minutos
-        if (taskStartTime.isAfter(now) &&
-            taskStartTime.difference(now).inMinutes >= 4 && taskStartTime.difference(now).inMinutes < 5) {
-          showNotification(
-              taskData['title'], taskData['description'], taskStartTime);
+          // Se a tarefa ainda não começou e está dentro do tempo de 5 minutos
+          if (taskStartTime.isAfter(now) &&
+              taskStartTime.difference(now).inMinutes >= 4 &&
+              taskStartTime.difference(now).inMinutes < 5) {
+            showNotification(
+                taskData['title'], taskData['description'], taskStartTime);
+          }
+        } else {
+          return ;
         }
       }
     }
