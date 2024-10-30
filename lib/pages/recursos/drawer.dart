@@ -51,7 +51,8 @@ class _MenuDrawerState extends State<MenuDrawer> {
     final String accountEmail =
         _firebaseAuth.currentUser?.email ?? 'Unknown Email';
 
-    // Variável para armazenar o userName do usuário autenticado
+    ///////////////////////////////////
+    /// Método para armazenar o userName do usuário autenticado
     Future<String> getUserName() async {
       String uid = _firebaseAuth.currentUser!.uid;
       DocumentSnapshot userDoc =
@@ -59,7 +60,8 @@ class _MenuDrawerState extends State<MenuDrawer> {
       return userDoc.get('userName') ?? 'Unknown User';
     }
 
-    // Método para mostrar o título e editar as configurações
+    ///////////////////////////////
+    /// Método para mostrar o título e editar as configurações
     Text mostrarTitulo(String texto) {
       return Text(
         texto,
@@ -68,14 +70,16 @@ class _MenuDrawerState extends State<MenuDrawer> {
       );
     }
 
-    // Método para mostrar o subtítulo e editar as configurações
+    ////////////////////////////////
+    /// Método para mostrar o subtítulo e editar as configurações
     Text mostrarSubTitulo(String texto) {
       return Text(
         texto,
         style: const TextStyle(color: Colors.white54),
       );
     }
-
+     ///////////////////////////////////////
+     ///Método para realizar o logout.
     void signOut() {
       // Obter o serviço de autenticação
       final authService = Provider.of<AuthService>(context, listen: false);

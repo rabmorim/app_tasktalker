@@ -53,6 +53,8 @@ class _ConnectGooglePageState extends State<ConnectGooglePage> {
         ));
   }
 
+  ///////////////////////
+  ///Método para conectar a conta do google
   Future connectionGoogle() async {
     //Primeiro obter o serviço de autenticação
     final authService = Provider.of<AuthService>(context, listen: false);

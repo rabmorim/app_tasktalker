@@ -8,7 +8,8 @@ class ChatService extends ChangeNotifier {
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
   final FirebaseFirestore _firebaseFirestore = FirebaseFirestore.instance;
 
-  //Método de enviar mensagem
+  /////////////////////////////////////
+  ///Método de enviar mensagem
   Future<void> sendMessage(String receiverId, String message) async {
     //Pegando informação do usuario que está enviando a mensagem e o horario e data do envio
     final String currentUserId = _firebaseAuth.currentUser!.uid;
@@ -39,13 +40,15 @@ class ChatService extends ChangeNotifier {
         .add(newMessage.toMap());
   }
 
-  //Método para buscar o userName do usuario
+  /////////////////////////////////////
+  ///Método para buscar o userName do usuario
    Future<String> _getUserName(String userId) async {
     DocumentSnapshot userDoc = await _firebaseFirestore.collection('users').doc(userId).get();
     return userDoc.get('userName') ?? 'Unknown User';
   }
 
-  //Método de receber mensagem (get message)
+  ////////////////////////////////////////
+  ///Método de receber mensagem (get message)
   Stream<QuerySnapshot> getMessage(String userId, String otherUserId) {
     //Obter o Id da sala de bate papo deles
     List<String> ids = [userId, otherUserId];

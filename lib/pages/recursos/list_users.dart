@@ -21,7 +21,8 @@ class _BuildUserListState extends State<BuildUserList> {
     _fetchUserCompanyCode();
   }
 
-  // Método para buscar o código da empresa do usuário logado
+  //////////////////////////////////
+  /// Método para buscar o código da empresa do usuário logado
   Future<void> _fetchUserCompanyCode() async {
     try {
       // Obtenha o UID do usuário atual

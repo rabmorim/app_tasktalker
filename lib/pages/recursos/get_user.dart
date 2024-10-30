@@ -1,7 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class GetUser {
-
+  ////////////////////////////////
+  ///Método para pegar o Username do usuário
   Future<String?> getUserName(String userId) async {
 
     DocumentSnapshot userDoc =

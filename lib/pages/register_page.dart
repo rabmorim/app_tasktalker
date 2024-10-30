@@ -27,7 +27,8 @@ class _RegisterState extends State<Register> {
   //Lista de páginas
   late List<Widget> _pages;
 
-  //Cadastrar
+  ///////////////////
+  /// Método Cadastrar
   void cadastrar() async {
     //Verificando se as senhas são compativeis
     if (_passwordController.text != _confirmPasswordController.text) {

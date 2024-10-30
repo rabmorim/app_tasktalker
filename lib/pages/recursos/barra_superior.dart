@@ -100,7 +100,8 @@ class _BarraSuperiorState extends State<BarraSuperior> {
       backgroundColor: const Color(0xff212121),
     );
   }
-
+  ////////////////////////////////
+  ///Método para fazer logout
   void signOut() {
     final authService = Provider.of<AuthService>(context, listen: false);
     authService.signOut();

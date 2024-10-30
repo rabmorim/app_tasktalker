@@ -222,7 +222,8 @@ class _UserTaskListState extends State<UserTaskList> {
       ),
     );
   }
-
+  /////////////////////
+  ///Métodos de formatação de data e tempo
   String formatTime(String dateTimeString) {
     DateTime dateTime = DateTime.parse(dateTimeString).toLocal();
     return DateFormat('HH:mm').format(dateTime);

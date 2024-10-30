@@ -5,7 +5,8 @@ import 'package:flutter/material.dart';
 class TaskColorManager {
   final Map<String, Color> _userColors = {};
 
-  // Gera cor aleatória
+  ////////////////////////////////
+  /// Método para gerar cor aleatória
   Color getRandomColor() {
     Random random = Random();
     int maxChannelValue = 100;
@@ -17,7 +18,8 @@ class TaskColorManager {
     );
   }
 
-  // Associa uma cor a um UID, se ainda não existir
+  /////////////////////////////////
+  ///Método que  associa uma cor a um UID, se ainda não existir
   Color setColorForUser(String uid) {
     if (!_userColors.containsKey(uid)) {
       _userColors[uid] = getRandomColor(); // Gera cor e associa ao UID
@@ -25,7 +27,8 @@ class TaskColorManager {
     return _userColors[uid]!;
   }
 
-  // busca a cor associada ao usuário da tarefa
+  ///////////////////////////////////////
+  /// Método que busca a cor associada ao usuário da tarefa
   Future<Color?> getUserColor(String userId) async {
     // Tenta buscar o documento do usuário
     DocumentSnapshot userDoc =

@@ -62,14 +62,42 @@ class _RegisterEnterpriseState extends State<RegisterEnterprise> {
 
                 MyButton(
                   onTap: () async {
-                    await createEnterprise(
-                        _codigoController.text, _cnpjController.text);
-                    // ignore: use_build_context_synchronously
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Empresa cadastrada com sucesso'),
-                      ),
-                    );
+                    CollectionReference enterprises =
+                        FirebaseFirestore.instance.collection('enterprise');
+                    QuerySnapshot snapshot = await enterprises.get();
+
+                    for (var doc in snapshot.docs) {
+                      var data = doc.data() as Map<String, dynamic>?;
+                      String? cnpj = data?['cnpj'].toString().trim();
+                      if (_cnpjController.text == cnpj) {
+                        setState(
+                          () {
+                            const snackBar = SnackBar(
+                              elevation: 0,
+                              behavior: SnackBarBehavior.floating,
+                              backgroundColor: Colors.transparent,
+                              content: AwesomeSnackbarContent(
+                                  title: 'Cnpj já cadastrado',
+                                  message: 'Favor cadastrar outro Cnpj',
+                                  contentType: ContentType.failure),
+                            );
+                            ScaffoldMessenger.of(context)
+                              ..hideCurrentSnackBar()
+                              ..showSnackBar(snackBar);
+                          },
+                        );
+                        return;
+                      } else {
+                        await createEnterprise(
+                            _codigoController.text, _cnpjController.text);
+                        // ignore: use_build_context_synchronously
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Empresa cadastrada com sucesso'),
+                          ),
+                        );
+                      }
+                    }
                   },
                   text: 'Cadastrar Empresa',
                 )
@@ -80,6 +108,7 @@ class _RegisterEnterpriseState extends State<RegisterEnterprise> {
       ),
     );
   }
+
   /////////////////////
   /// Método para cuidar do estado da mudança e digitação do CNPJ. Sempre que termina de digitar o CPNJ, ele é validado.
   void onCnpjChanged() {
@@ -115,6 +144,7 @@ class _RegisterEnterpriseState extends State<RegisterEnterprise> {
       }
     }
   }
+
   ///////////////////////////
   ///Método para validar o cnpj fornecido
   bool validarCNPJ(String cnpj) {
@@ -149,11 +179,15 @@ class _RegisterEnterpriseState extends State<RegisterEnterprise> {
     // Verifica se os dígitos calculados são iguais aos fornecidos
     return cnpj.endsWith('$digito1$digito2');
   }
+
   ////////////////////
   /// Método para criar a empresa no banco de dados
   Future<void> createEnterprise(String codigo, String cnpj) async {
     try {
-      await FirebaseFirestore.instance.collection('enterprise').doc(codigo.toLowerCase()).set(
+      await FirebaseFirestore.instance
+          .collection('enterprise')
+          .doc(codigo.toLowerCase())
+          .set(
         {
           'code': codigo.toLowerCase(),
           'cnpj': cnpj,

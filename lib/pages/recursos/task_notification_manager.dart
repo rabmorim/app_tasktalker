@@ -10,7 +10,8 @@ class TaskNotificationManager {
     flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
   }
 
-  // Método para inicializar as configurações de notificações
+  /////////////////////////
+  /// Método para inicializar as configurações de notificações
   Future<void> initialize() async {
     // Configurações para Android
     const AndroidInitializationSettings initializationSettingsAndroid =
@@ -29,7 +30,8 @@ class TaskNotificationManager {
     );
   }
 
-  // Função para verificar tarefas e enviar notificações
+  ///////////////////////////
+  /// Método para verificar tarefas e enviar notificações
   Future<void> checkAndSendNotifications() async {
     // Pega o usuário autenticado
     User? currentUser = FirebaseAuth.instance.currentUser;
@@ -41,7 +43,7 @@ class TaskNotificationManager {
       var snapshot = await FirebaseFirestore.instance
           .collection('tasks')
           .where('assigned_to', isEqualTo: userId)
-          .get();
+          .get(); //////////////////////////////////////////////////////////////// preciso alterar para envio correto de notificação
 
       var now = DateTime.now();
 
@@ -60,7 +62,8 @@ class TaskNotificationManager {
     }
   }
 
-  // Função para exibir a notificação
+  ///////////////////////////////
+  /// Método para exibir a notificação
   Future<void> showNotification(
       String title, String description, DateTime startTime) async {
     const AndroidNotificationDetails androidDetails =

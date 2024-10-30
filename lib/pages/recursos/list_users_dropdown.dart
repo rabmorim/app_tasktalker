@@ -24,7 +24,8 @@ class _UserListDropdownState extends State<UserListDropdown> {
     super.initState();
     _fetchUserEnterpriseCode();
   }
-
+  /////////////////////////////////////
+  /// Método para buscar o código da empresa do usuário autenticado
   Future<void> _fetchUserEnterpriseCode() async {
     String uid = FirebaseAuth.instance.currentUser!.uid;
     // Busca o código da empresa do usuário autenticado na coleção global de usuários

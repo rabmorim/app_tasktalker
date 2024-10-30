@@ -23,7 +23,8 @@ class _UserTaskListGoogleState extends State<UserTaskListGoogle> {
     super.initState();
     _fetchGoogleCalendarTasks();
   }
-
+  /////////////////////
+  ///Método que busca as tarefas do google calendar do usuário autenticado
   Future<void> _fetchGoogleCalendarTasks() async {
     try {
       final GoogleSignInAccount? account = await _googleSignIn.signIn();
@@ -122,13 +123,16 @@ class _UserTaskListGoogleState extends State<UserTaskListGoogle> {
       },
     );
   }
-
+  //////////////////////
+  ///Método para formação de Data
   String _formatDateTime(DateTime? dateTime) {
     if (dateTime == null) return 'Sem data';
     return '${dateTime.day}/${dateTime.month}/${dateTime.year} ${dateTime.hour}:${dateTime.minute}';
   }
 }
 
+/////////////////////
+///Classe para requisição Http
 class _GoogleHttpClient extends http.BaseClient {
   final Map<String, String> _headers;
   final http.Client _client = http.Client();

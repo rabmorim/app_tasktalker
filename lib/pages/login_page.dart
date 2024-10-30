@@ -19,7 +19,8 @@ class LoginPageState extends State<LoginPage> {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
 
-  //Logar
+  //////////////////////
+  ///Método para fazer login
   void login() async {
     
     //Primeiro obter o serviço de autenticação

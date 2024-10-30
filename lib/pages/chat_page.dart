@@ -25,7 +25,8 @@ class _ChatPageState extends State<ChatPage> {
   final TextEditingController _messageController = TextEditingController();
   final ChatService _chatService = ChatService();
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
-
+  /////////////////////////////
+  ///Método para enviar mensagem
   void sendMessage() async {
     //Verificando se a mensagem nao está vazia, permitindo apenas campos nao vazios.
     if (_messageController.text.isNotEmpty) {
@@ -57,7 +58,8 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
-  //Construir lista de mensagens
+  ////////////////////
+  ///Método para Construir lista de mensagens
   Widget _buildMessageList() {
     return StreamBuilder(
       stream: _chatService.getMessage(
@@ -84,7 +86,8 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
-  //Construir o item da mensagem
+  /////////////////////////
+  /// Método para Construir o item da mensagem
   Widget _buildMessageItem(DocumentSnapshot document) {
     Map<String, dynamic> data = document.data() as Map<String, dynamic>;
     //Alinhar a mensagem do destinatario a esquerda e do remetente na direita
@@ -109,7 +112,8 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
-  //Construir a area de input da mensagem
+  ///////////////////
+  /// Método para Construir a area de input da mensagem
   Widget _buildMessageInput() {
     return Row(
       children: [

@@ -89,19 +89,22 @@ class _CalendarPageState extends State<CalendarPage> {
     }
 
 
-//Normalizar as datas
+//////////////////////
+/// Método para Normalizar as datas
   DateTime normalizeDate(DateTime date) {
     return DateTime(date.year, date.month, date.day);
   }
 
-  //Formatar a hora para impressão no listview
+  ///////////////////////
+  /// Método para Formatar a hora para impressão no listview
   String formatTime(String dateTimeString) {
     DateTime dateTime = DateTime.parse(dateTimeString).toLocal();
     return DateFormat('HH:mm')
         .format(dateTime); // Formato de 24 horas (ex: 14:30)
   }
 
-//Agrupando eventos por data
+  /////////////////////////
+  ///Método para Agrupar eventos por data
   Map<DateTime, List<dynamic>> groupEventsByDate(
       List<Map<String, dynamic>> tasks) {
     Map<DateTime, List<dynamic>> groupedEvents = {};
@@ -127,7 +130,8 @@ class _CalendarPageState extends State<CalendarPage> {
 
     return groupedEvents;
   }
-
+  /////////////////////////////
+  ///Método que controla o formato do calendário escolhido pelo usuário
   void _handleFormatChange(CalendarFormat format) {
     setState(() {
       _calendarFormat = format;
