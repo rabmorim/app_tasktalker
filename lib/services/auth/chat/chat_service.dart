@@ -42,8 +42,9 @@ class ChatService extends ChangeNotifier {
 
   /////////////////////////////////////
   ///Método para buscar o userName do usuario
-   Future<String> _getUserName(String userId) async {
-    DocumentSnapshot userDoc = await _firebaseFirestore.collection('users').doc(userId).get();
+  Future<String> _getUserName(String userId) async {
+    DocumentSnapshot userDoc =
+        await _firebaseFirestore.collection('users').doc(userId).get();
     return userDoc.get('userName') ?? 'Unknown User';
   }
 
@@ -61,5 +62,52 @@ class ChatService extends ChangeNotifier {
         .collection('messages')
         .orderBy('timestamp', descending: false)
         .snapshots();
+  }
+
+  ////////////////////////////////////////
+  /// Método para atualizar a mensagem
+  Future<void> updateMessage(
+      String receiverId, String messageId, String newMessageContent) async {
+    final String currentUserId = _firebaseAuth.currentUser!.uid;
+
+    // Obter o ID da sala de bate-papo com base no ID do usuário atual e do receptor
+    List<String> ids = [currentUserId, receiverId];
+    ids.sort();
+    String chatRoomId = ids.join("_");
+
+    try {
+      await _firebaseFirestore
+          .collection('chat_rooms')
+          .doc(chatRoomId)
+          .collection('messages')
+          .doc(messageId)
+          .update({'message': newMessageContent, 'timestamp': Timestamp.now()});
+      notifyListeners(); // Notifica sobre a atualização
+    } catch (e) {
+      print("Erro ao atualizar a mensagem: $e");
+    }
+  }
+
+  ////////////////////////////////////////
+  /// Método para excluir a mensagem
+  Future<void> deleteMessage(String receiverId, String messageId) async {
+    final String currentUserId = _firebaseAuth.currentUser!.uid;
+
+    // Obter o ID da sala de bate-papo com base no ID do usuário atual e do receptor
+    List<String> ids = [currentUserId, receiverId];
+    ids.sort();
+    String chatRoomId = ids.join("_");
+
+    try {
+      await _firebaseFirestore
+          .collection('chat_rooms')
+          .doc(chatRoomId)
+          .collection('messages')
+          .doc(messageId)
+          .delete();
+      notifyListeners(); // Notifica sobre a exclusão
+    } catch (e) {
+      print("Erro ao excluir a mensagem: $e");
+    }
   }
 }

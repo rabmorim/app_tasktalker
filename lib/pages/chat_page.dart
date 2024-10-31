@@ -42,7 +42,10 @@ class _ChatPageState extends State<ChatPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: BarraSuperior(titulo: widget.receiverUserName, isCalendarPage: false,),
+      appBar: BarraSuperior(
+        titulo: widget.receiverUserName,
+        isCalendarPage: false,
+      ),
       body: Column(
         children: [
           //mensagens
@@ -86,16 +89,16 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
-  /////////////////////////
+/////////////////////////
   /// Método para Construir o item da mensagem
   Widget _buildMessageItem(DocumentSnapshot document) {
     Map<String, dynamic> data = document.data() as Map<String, dynamic>;
-    //Alinhar a mensagem do destinatario a esquerda e do remetente na direita
     var alignment = (data['senderId'] == _firebaseAuth.currentUser!.uid)
         ? Alignment.centerRight
         : Alignment.centerLeft;
     String user = data['senderUserName'] ?? "user null";
     String message = data['message'] ?? "message null";
+
     return Container(
       alignment: alignment,
       child: Column(
@@ -105,11 +108,97 @@ class _ChatPageState extends State<ChatPage> {
         mainAxisAlignment: (data['senderId'] == _firebaseAuth.currentUser!.uid)
             ? MainAxisAlignment.end
             : MainAxisAlignment.start,
-        children: [Text(user), 
-        const SizedBox(height: 5,),
-        ChatBubble(message: message)],
+        children: [
+          Text(user),
+          const SizedBox(height: 5),
+
+          // Envolvendo o ChatBubble com GestureDetector para long press
+          if (data['senderId'] == _firebaseAuth.currentUser!.uid)
+            GestureDetector(
+              onLongPressStart: (LongPressStartDetails details) {
+                // Mostrar PopupMenuButton ao segurar a mensagem
+                showMenu(
+                  context: context,
+                  position: RelativeRect.fromLTRB(
+                    details.globalPosition.dx, // Posição horizontal
+                    details.globalPosition.dy, // Posição vertical
+                    details.globalPosition.dx,
+                    details.globalPosition.dy,
+                  ),
+                  items: [
+                    PopupMenuItem<String>(
+                      value: 'Editar',
+                      child: const ListTile(
+                        leading: Icon(Icons.edit),
+                        title: Text('Editar'),
+                      ),
+                      onTap: () => _editMessage(document.id, message),
+                    ),
+                    PopupMenuItem<String>(
+                      value: 'Excluir',
+                      child: const ListTile(
+                        leading: Icon(Icons.delete),
+                        title: Text('Excluir'),
+                      ),
+                      onTap: () => _deleteMessage(document.id),
+                    ),
+                  ],
+                );
+              },
+              child: ChatBubble(message: message),
+            ),
+          if (data['senderId'] != _firebaseAuth.currentUser!.uid)
+            ChatBubble(message: message)
+        ],
       ),
     );
+  }
+
+  ////////////////////////////////
+  /// Método para editar a mensagem
+  void _editMessage(String messageId, String currentMessage) {
+    // Aqui você pode adicionar um TextField para atualizar a mensagem.
+    // Exemplo de implementação básica:
+    _messageController.text =
+        currentMessage; // Preenche com o conteúdo atual para editar
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Editar Mensagem"),
+          content: TextField(
+            controller: _messageController,
+            decoration: const InputDecoration(labelText: "Nova mensagem"),
+          ),
+          actions: [
+            TextButton(
+              child: const Text(
+                "Cancelar",
+                style: TextStyle(color: Colors.white54),
+              ),
+              onPressed: () => Navigator.pop(context),
+            ),
+            TextButton(
+              child: const Text(
+                "Salvar",
+                style: TextStyle(color: Colors.white54),
+              ),
+              onPressed: () {
+                _chatService.updateMessage(
+                    widget.receiverUserID, messageId, _messageController.text);
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  ////////////////////////////////
+  /// Método para excluir a mensagem
+  void _deleteMessage(String messageId) {
+    _chatService.deleteMessage(widget.receiverUserID, messageId);
   }
 
   ///////////////////
