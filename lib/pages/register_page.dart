@@ -4,6 +4,7 @@ import "package:app_mensagem/pages/recursos/text_field.dart";
 import "package:app_mensagem/pages/register_enterprise.dart";
 import "package:app_mensagem/services/auth/auth_service.dart";
 import "package:flutter/material.dart";
+import "package:google_sign_in/google_sign_in.dart";
 
 class Register extends StatefulWidget {
   final void Function()? onTap;
@@ -27,6 +28,24 @@ class _RegisterState extends State<Register> {
   //Lista de páginas
   late List<Widget> _pages;
 
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+    scopes: [
+      'email',
+    ],
+  );
+
+//////////////////////////////
+  /// Método para realizar o login com o Google e obter o e-mail
+  Future<String?> _loginWithGoogle() async {
+    try {
+      final account = await _googleSignIn.signIn();
+      return account?.email;
+    } catch (error) {
+      //
+      return null;
+    }
+  }
+
   ///////////////////
   /// Método Cadastrar
   void cadastrar() async {
@@ -40,10 +59,11 @@ class _RegisterState extends State<Register> {
       return;
     }
     //Verificando se existe empresa com aquele código
-    bool verifyEnterprise = await authService.verifyEnterprise(_codeController.text);
-    if(verifyEnterprise == false){
-         // ignore: use_build_context_synchronously
-         ScaffoldMessenger.of(context).showSnackBar(
+    bool verifyEnterprise =
+        await authService.verifyEnterprise(_codeController.text);
+    if (verifyEnterprise == false) {
+      // ignore: use_build_context_synchronously
+      ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Empresa nao existente'),
         ),
@@ -63,11 +83,21 @@ class _RegisterState extends State<Register> {
       );
       return;
     }
-
-
+    // Login com Google para obter o e-mail do usuário
+    String? userEmail = await _loginWithGoogle();
+    if (userEmail == null) {
+      // ignore: use_build_context_synchronously
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Erro ao autenticar com Google'),
+        ),
+      );
+      return;
+    }
+    // Registrar o usuário no sistema
     try {
-      await authService.signUpWithEmailAndPassword(
-          _emailController.text, _passwordController.text, _userName.text, _codeController.text);
+      await authService.signUpWithEmailAndPassword(_emailController.text,
+          _passwordController.text, _userName.text, _codeController.text);
     } catch (e) {
       // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(
@@ -78,6 +108,19 @@ class _RegisterState extends State<Register> {
         ),
       );
     }
+    // Adicionar o usuário à ACL do calendário da empresa
+    await authService.addUserToCalendarACL(
+      companyCode: _codeController.text,
+      userEmail: userEmail,
+    );
+
+    // Confirmação de sucesso
+    // ignore: use_build_context_synchronously
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Usuário cadastrado e adicionado ao calendário!'),
+      ),
+    );
   }
 
   @override

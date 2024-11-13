@@ -1,17 +1,18 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.chatapp.com">
 
+    <!-- Permissões necessárias -->
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.VIBRATE"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
-    <uses-permission android:name="android.permission.GET_ACCOUNTS" />
+    <uses-permission android:name="android.permission.GET_ACCOUNTS"/>
 
-    
     <application
         android:label="app_mensagem"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
-        
+
+        <!-- Atividade principal do aplicativo -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -32,7 +33,7 @@
             </intent-filter>
         </activity>
 
-        <!-- Service para o Firebase Cloud Messaging -->
+        <!-- Serviço para o Firebase Cloud Messaging -->
         <service
             android:name="com.google.firebase.messaging.FirebaseMessagingService"
             android:exported="true">
@@ -41,7 +42,7 @@
             </intent-filter>
         </service>
 
-        <!-- Serviço de notificações persistentes -->
+        <!-- Serviços de notificações locais -->
         <receiver android:enabled="true" android:exported="true"
             android:name="com.dexterous.flutterlocalnotifications.receivers.NotificationReceiver" />
         
@@ -53,8 +54,8 @@
         
         <receiver
             android:name="com.dexterous.flutterlocalnotifications.receivers.RebootBroadcastReceiver"
-            android:enabled ="true"
-            android:exported ="true"
+            android:enabled="true"
+            android:exported="true"
             android:permission="android.permission.RECEIVE_BOOT_COMPLETED">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED"/>
@@ -63,10 +64,16 @@
             </intent-filter>
         </receiver>
 
+        <!-- Meta-dados para o Flutter e integração com a API do Google -->
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
-        
+
+        <!-- Meta-data para a chave de API do Google-->
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="AIzaSyCEkW8z4YKn3Pa6Mv4uK3SJFoPMuA7DnhU"/>
+
     </application>
 
     <queries>

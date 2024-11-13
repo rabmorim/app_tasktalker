@@ -1,11 +1,15 @@
+import 'dart:convert';
 import 'package:app_mensagem/pages/recursos/barra_superior.dart';
 import 'package:app_mensagem/pages/recursos/drawer.dart';
 import 'package:app_mensagem/pages/recursos/get_user.dart';
 import 'package:app_mensagem/pages/recursos/modal_form.dart';
 import 'package:app_mensagem/pages/recursos/task_color_manager.dart';
+import 'package:app_mensagem/services/auth/auth_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:googleapis/calendar/v3.dart' as calendar;
+import 'package:googleapis_auth/auth_io.dart';
 import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
 
@@ -25,72 +29,210 @@ class _CalendarPageState extends State<CalendarPage> {
   Map<DateTime, List<dynamic>> eventsMap = {}; // Armazena eventos por data
   List<dynamic> _selectedEvents = []; // Eventos da data selecionada
   GetUser getUserName = GetUser();
+  AuthService authService = AuthService();
+  // Listas separadas para eventos de Firestore e Google Calendar
+  List<Map<String, dynamic>> firestoreEvents = [];
+  List<Map<String, dynamic>> googleCalendarEvents = [];
 
   @override
   void initState() {
     super.initState();
     loadFirestoreTasks();
+    fetchCalendarAndEvents();
   }
 
-  ///////////////////
-  /// Método para carregar as tarefas do firestore
+  ////////////////////////
+  /// Método que obtém o ID do calendário e, em seguida, chama fetchGoogleCalendar
+  Future<void> fetchCalendarAndEvents() async {
+    try {
+      // Obtenha o ID do calendário da empresa do Firestore
+      String enterpriseCalendarId = await getCalendarId();
+
+      // Chame o fetchGoogleCalendar com o ID do calendário da empresa
+      await fetchGoogleCalendar(enterpriseCalendarId);
+    } catch (e) {
+      //
+    }
+  }
+
+  //////////////////////////
+  /// Método para Pegar o Id do calendário usando a instância do authservice
+  Future<String> getCalendarId() async {
+    String? uid = FirebaseAuth.instance.currentUser!.uid;
+    DocumentSnapshot userDoc =
+        await FirebaseFirestore.instance.collection('users').doc(uid).get();
+
+    String enterpriseCode = userDoc['code'];
+    var calendarId =
+        await authService.getCalendarIdFromCompanyCode(enterpriseCode);
+
+    return calendarId;
+  }
+
+  //////////////////////////////
+  /// Método para obter o client autenticado
+  Future<calendar.CalendarApi> getCalendarApiClient() async {
+    //Pegando as chaves de acesso de forma segura e privada
+    QuerySnapshot<Map<String, dynamic>> keySnapshot =
+        await FirebaseFirestore.instance.collection('key').get();
+    var keyDoc = keySnapshot.docs;
+    // Pegando as chaves do Firestore
+    String privateKey = keyDoc[0]['private_key'];
+    privateKey = privateKey.replaceAll("\\\\n", "\n");
+    String privateKeyId = keyDoc[1]['private_key_id'];
+
+// Inserindo corretamente os delimitadores no JSON
+    // Constrói o JSON de credenciais com a chave formatada corretamente
+    var jsonCredentials = '''
+  {
+    "type": "service_account",
+    "project_id": "chatapp-f6349",
+    "private_key_id": "$privateKeyId",
+    "private_key": "${privateKey.replaceAll('\n', '\\n')}",
+    "client_email": "firebase-adminsdk-uqeoc@chatapp-f6349.iam.gserviceaccount.com",
+    "client_id": "109927196779049391016",
+    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+    "token_uri": "https://oauth2.googleapis.com/token",
+    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+    "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-uqeoc%40chatapp-f6349.iam.gserviceaccount.com",
+    "universe_domain": "googleapis.com"
+  }
+  ''';
+
+    var credentials =
+        ServiceAccountCredentials.fromJson(json.decode(jsonCredentials));
+
+    final scopes = [calendar.CalendarApi.calendarScope];
+
+    var client = await clientViaServiceAccount(credentials, scopes);
+    return calendar.CalendarApi(client);
+  }
+
+//////////////////////////
+  /// Método para buscar os eventos no Google Calendar
+  Future<void> fetchGoogleCalendar(String enterpriseCalendarId) async {
+    try {
+      var calendarApi = await getCalendarApiClient();
+      var events = await calendarApi.events.list(enterpriseCalendarId);
+
+      googleCalendarEvents = events.items?.map((event) {
+            return {
+              'title': event.summary,
+              'start_time': event.start?.dateTime?.toString(),
+              'end_time': event.end?.dateTime?.toString(),
+              'description': event.description,
+              'source': 'google'
+            };
+          }).toList() ??
+          [];
+      // Chama a função para processar todos os eventos após carregar o Google Calendar
+      processAllEvents();
+    } catch (e) {
+      //
+    }
+  }
+
+  ///////////////////////////
+  /// Método para carregar as tarefas do Firestore
   Future<void> loadFirestoreTasks() async {
     String? uid = FirebaseAuth.instance.currentUser!.uid;
     DocumentSnapshot userDoc =
         await FirebaseFirestore.instance.collection('users').doc(uid).get();
+
     if (userDoc.exists) {
       String enterpriseCode = userDoc['code'];
-      // Busca as tarefas da subcoleção 'tasks' dentro do documento da empresa do usuário
       QuerySnapshot snapshot = await FirebaseFirestore.instance
           .collection('enterprise')
           .doc(enterpriseCode)
           .collection('tasks')
           .get();
-      List<Map<String, dynamic>> tasks = snapshot.docs
-          .map((doc) => doc.data() as Map<String, dynamic>)
-          .toList();
-            // Carregar cores dos usuários
-    for (var task in tasks) {
-      String userId = task['assigned_to'];
-      
-      // Pega o documento do usuário para obter a cor
-      DocumentSnapshot assignedUserDoc = await FirebaseFirestore.instance
-          .collection('enterprise')
-          .doc(enterpriseCode)
-          .collection('users')
-          .doc(userId)
-          .get();
 
-      if (assignedUserDoc.exists) {
+      firestoreEvents = await Future.wait(snapshot.docs.map((doc) async {
+        var task = doc.data() as Map<String, dynamic>;
+        String userId = task['assigned_to'];
+
+        // Pega o documento do usuário para obter a cor
+        DocumentSnapshot<Map<String, dynamic>> assignedUserDoc =
+            await FirebaseFirestore.instance
+                .collection('enterprise')
+                .doc(enterpriseCode)
+                .collection('users')
+                .doc(userId)
+                .get();
+
         String? userColorHex = assignedUserDoc['color'];
-
         if (userColorHex != null) {
-          // Converte a string hexadecimal em uma cor
-          Color userColor = Color(
+          task['userColor'] = Color(
               int.parse(userColorHex.substring(1, 7), radix: 16) + 0xFF000000);
-
-          // Adiciona essa cor no próprio `task` temporariamente para uso na UI
-          task['userColor'] = userColor;
         }
+        return task;
+      }).toList());
+
+      // Chama a função para processar todos os eventos após carregar as tarefas do Firestore
+      processAllEvents();
+    } else {
+      throw Exception("Empresa do usuário não encontrada.");
+    }
+  }
+
+  /////////////////////////
+  /// Método para normalizar datas
+  String normalizeDateString(dynamic date) {
+    // Verifica se é Timestamp e converte para DateTime
+    DateTime dateTime;
+    if (date is Timestamp) {
+      dateTime = date.toDate();
+    } else if (date is String) {
+      dateTime = DateTime.parse(date);
+    } else {
+      throw ArgumentError('Data em formato inválido');
+    }
+
+    // Converte para o formato local e retorna a string normalizada
+    dateTime = dateTime.toLocal();
+    return "${dateTime.year.toString().padLeft(4, '0')}-${dateTime.month.toString().padLeft(2, '0')}-${dateTime.day.toString().padLeft(2, '0')} ${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}";
+  }
+
+  ///////////////////////
+  /// Método para processar e combinar eventos sem duplicação
+  void processAllEvents() {
+    List<Map<String, dynamic>> combinedEvents = [];
+    Set<String> uniqueEventKeys = {};
+
+    // Adiciona eventos do Firestore ao combinedEvents e armazena as chaves únicas
+    for (var event in firestoreEvents) {
+      String normalizedStartTime = normalizeDateString(event['start_time']);
+      String eventKey =
+          "${event['title']?.trim()?.toLowerCase()}_$normalizedStartTime";
+
+      if (!uniqueEventKeys.contains(eventKey)) {
+        combinedEvents.add(event);
+        uniqueEventKeys.add(eventKey);
       }
     }
 
-    setState(
-      () {
-        eventsMap = groupEventsByDate(tasks);
-        if (_selectedDay != null) {
-          _selectedEvents = eventsMap[_selectedDay!] ?? [];
-        }
-      },
-    );
-  } else {
-    throw Exception("Empresa do usuário não encontrada.");
-  }
+    // Adiciona eventos do Google Calendar ao combinedEvents se a chave for única
+    for (var event in googleCalendarEvents) {
+      String normalizedStartTime = normalizeDateString(event['start_time']);
+      String eventKey =
+          "${event['title']?.trim()?.toLowerCase()}_$normalizedStartTime";
+
+      if (!uniqueEventKeys.contains(eventKey)) {
+        combinedEvents.add(event);
+        uniqueEventKeys.add(eventKey);
+      }
     }
+    // Atualiza o estado com a lista combinada e organizada por data
+    setState(() {
+      eventsMap = groupEventsByDate(combinedEvents);
+      if (_selectedDay != null) {
+        _selectedEvents = eventsMap[_selectedDay!] ?? [];
+      }
+    });
+  }
 
-
-//////////////////////
-/// Método para Normalizar as datas
+  /////////////////////
+  /// Método para Normalizar as datas
   DateTime normalizeDate(DateTime date) {
     return DateTime(date.year, date.month, date.day);
   }
@@ -103,14 +245,13 @@ class _CalendarPageState extends State<CalendarPage> {
         .format(dateTime); // Formato de 24 horas (ex: 14:30)
   }
 
-  /////////////////////////
-  ///Método para Agrupar eventos por data
+  ///////////////////////
+  /// Agrupador de eventos por data
   Map<DateTime, List<dynamic>> groupEventsByDate(
       List<Map<String, dynamic>> tasks) {
     Map<DateTime, List<dynamic>> groupedEvents = {};
 
     for (var task in tasks) {
-      // Verificar se as datas existem antes de tentar parseá-las
       String? startTimeString = task['start_time'];
       String? endTimeString = task['end_time'];
 
@@ -120,16 +261,16 @@ class _CalendarPageState extends State<CalendarPage> {
         DateTime initialNormalizedDate = normalizeDate(startDate);
         DateTime finalNormalizedDate = normalizeDate(endDate);
 
-        // Adicionar evento ao mapa sem duplicação
+        // Adiciona evento ao mapa, garantindo que não haja duplicação
         groupedEvents.putIfAbsent(initialNormalizedDate, () => []).add(task);
         if (initialNormalizedDate != finalNormalizedDate) {
           groupedEvents.putIfAbsent(finalNormalizedDate, () => []).add(task);
         }
-      } else {}
+      }
     }
-
     return groupedEvents;
   }
+
   /////////////////////////////
   ///Método que controla o formato do calendário escolhido pelo usuário
   void _handleFormatChange(CalendarFormat format) {
@@ -159,6 +300,7 @@ class _CalendarPageState extends State<CalendarPage> {
                 _focusedDay = focusedDay;
                 _selectedEvents = eventsMap[selectedDay] ?? [];
                 loadFirestoreTasks();
+                fetchCalendarAndEvents();
               });
             },
             focusedDay: _focusedDay,
@@ -241,41 +383,54 @@ class _CalendarPageState extends State<CalendarPage> {
               // Combina as listas: tarefas futuras primeiro, seguidas das passadas
               _selectedEvents = [...upcomingTasks, ...passedTasks];
               return Center(child: Text(text));
-            },
-                // Local onde exibe a bolinha de cor no calendário
-                markerBuilder: (context, day, events) {
+            }, markerBuilder: (context, day, events) {
               if (events.isNotEmpty) {
                 return Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: events.map<Widget>((event) {
-                    var userId = (event as Map<String, dynamic>)['assigned_to'];
-                    if (userId != null) {
-                      return FutureBuilder<Color?>(
-                        future: colorManager.getUserColor(userId),
-                        builder: (context, snapshot) {
-                          if (snapshot.connectionState ==
-                                  ConnectionState.done &&
-                              snapshot.hasData) {
-                            Color? userColor = snapshot.data;
-                            return Container(
-                              margin: const EdgeInsets.symmetric(
-                                  horizontal:
-                                      0.5), // Espaçamento entre as bolinhas
-                              width: 8,
-                              height: 8,
-                              decoration: BoxDecoration(
-                                color: userColor ?? Colors.grey,
-                                shape: BoxShape.circle,
-                              ),
-                            );
-                          } else {
-                            return Container(); // Placeholder enquanto carrega
-                          }
-                        },
+                    var eventSource = (event as Map<String, dynamic>)['source'];
+
+                    if (eventSource == 'app') {
+                      var userId = event['assigned_to'];
+                      if (userId != null) {
+                        return FutureBuilder<Color?>(
+                          future: colorManager.getUserColor(userId),
+                          builder: (context, snapshot) {
+                            if (snapshot.connectionState ==
+                                    ConnectionState.done &&
+                                snapshot.hasData) {
+                              Color? userColor = snapshot.data;
+                              return Container(
+                                margin: const EdgeInsets.symmetric(
+                                    horizontal:
+                                        0.8), // Espaçamento entre as bolinhas
+                                width: 8,
+                                height: 8,
+                                decoration: BoxDecoration(
+                                  color: userColor ?? Colors.grey,
+                                  shape: BoxShape.circle,
+                                ),
+                              );
+                            } else {
+                              return Container(); // Placeholder enquanto carrega
+                            }
+                          },
+                        );
+                      }
+                    } else if (eventSource == 'google') {
+                      // Exibe uma bolinha branca para eventos do Google Calendar
+                      return Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 0.8),
+                        width: 8,
+                        height: 8,
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                        ),
                       );
-                    } else {
-                      return Container(); // Placeholder se o userId for nulo
                     }
+
+                    return Container(); // Placeholder para eventos que não possuem source
                   }).toList(),
                 );
               }
@@ -294,146 +449,177 @@ class _CalendarPageState extends State<CalendarPage> {
                     itemCount: _selectedEvents.length,
                     itemBuilder: (context, index) {
                       final event = _selectedEvents[index];
-                      var userId = event['assigned_to'];
-                      final startTime = event['start_time'];
-                      final endTime = event['end_time'];
 
-                      // Formatação das horas (apenas se houver 'dateTime' nos eventos)
-                      String startFormatted =
-                          startTime != null ? formatTime(startTime) : '';
-                      String endFormatted =
-                          endTime != null ? formatTime(endTime) : '';
+                      if (event['source'] == 'app') {
+                        // Eventos do Firestore: exibir com cor e nome do usuário
+                        var userId = event['assigned_to'];
+                        final startTime = event['start_time'];
+                        final endTime = event['end_time'];
 
-                      // FutureBuilder para carregar a cor e o nome do usuário
-                      return FutureBuilder<Color?>(
-                        future: colorManager.getUserColor(userId),
-                        builder: (context, snapshotColor) {
-                          if (snapshotColor.hasError) {
-                            return Container(
-                              margin: const EdgeInsets.only(bottom: 8),
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(15),
-                                color: Colors
-                                    .red, // Exibe uma cor diferente em caso de erro
-                              ),
-                              child: const ListTile(
-                                title: Text('Erro ao carregar cor',
-                                    style: TextStyle(color: Colors.white)),
-                              ),
-                            );
-                          }
+                        // Formatação das horas (apenas se houver 'dateTime' nos eventos)
+                        String startFormatted =
+                            startTime != null ? formatTime(startTime) : '';
+                        String endFormatted =
+                            endTime != null ? formatTime(endTime) : '';
 
-                          Color? userColor = snapshotColor.data ?? Colors.grey;
-                          // Verificar se o evento já terminou
-                          DateTime now = DateTime.now();
-                          DateTime endTime = DateTime.parse(event['end_time']);
-                          bool isExpired = endTime.isBefore(now);
+                        // FutureBuilder para carregar a cor e o nome do usuário
+                        return FutureBuilder<Color?>(
+                          future: colorManager.getUserColor(userId ?? ""),
+                          builder: (context, snapshotColor) {
+                            Color userColor = snapshotColor.data ?? Colors.grey;
 
-                          // Definir cor de fundo com base na expiração
-                          Color backgroundColor = isExpired
-                              ? Colors.white.withOpacity(0.8)
-                              : userColor;
+                            // Verificar se o evento já terminou
+                            DateTime now = DateTime.now();
+                            DateTime endTimeParsed =
+                                DateTime.parse(event['end_time']);
+                            bool isExpired = endTimeParsed.isBefore(now);
 
-                          // FutureBuilder para carregar o nome do usuário
-                          return FutureBuilder<String?>(
-                            future: getUserName.getUserName(
-                                userId), // Aqui usamos FutureBuilder para o nome
-                            builder: (context, snapshotName) {
-                              if (snapshotName.connectionState ==
-                                  ConnectionState.waiting) {
+                            // Definir cor de fundo com base na expiração
+                            Color backgroundColor = isExpired
+                                ? Colors.white.withOpacity(0.8)
+                                : userColor;
+
+                            // FutureBuilder para carregar o nome do usuário
+                            return FutureBuilder<String?>(
+                              future: getUserName.getUserName(userId ?? ""),
+                              builder: (context, snapshotName) {
+                                String userName = snapshotName.data ?? '';
+
+                                // Estilo do nome, com riscado se expirado
+                                TextStyle userNameStyle = isExpired
+                                    ? const TextStyle(
+                                        color: Colors.black,
+                                        decoration: TextDecoration.lineThrough,
+                                        decorationThickness: 2,
+                                        fontSize: 14,
+                                        decorationColor: Colors.black)
+                                    : const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        letterSpacing: 2.5,
+                                        fontSize: 14,
+                                      );
+
                                 return Container(
                                   margin: const EdgeInsets.only(bottom: 8),
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(15),
                                     color: backgroundColor,
                                   ),
-                                  child: const ListTile(
-                                    title: Text('Carregando...',
-                                        style: TextStyle(color: Colors.white)),
-                                  ),
-                                );
-                              }
-
-                              if (snapshotName.hasError ||
-                                  !snapshotName.hasData) {
-                                return Container(
-                                  margin: const EdgeInsets.only(bottom: 8),
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(15),
-                                    color: userColor,
-                                  ),
-                                  child: const ListTile(
-                                    title: Text('Erro ao carregar nome',
-                                        style: TextStyle(color: Colors.white)),
-                                  ),
-                                );
-                              }
-                              //Pegando o nome do usuário
-                              String? userName =
-                                  snapshotName.data ?? 'Usuário Desconhecido';
-
-                              // Definir estilo do nome com riscado se expirado
-                              TextStyle userNameStyle = isExpired
-                                  ? const TextStyle(
-                                      color: Colors.black,
-                                      decoration: TextDecoration
-                                          .lineThrough, // Nome riscado
-                                      decorationThickness:
-                                          2, // Espessura da linha
-                                      fontSize: 14,
-                                      decorationColor: Colors.black)
-                                  : const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                      letterSpacing: 2.5,
-                                      fontSize: 14,
-                                    );
-
-                              return Container(
-                                margin: const EdgeInsets.only(bottom: 8),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(15),
-                                  color: backgroundColor,
-                                ),
-                                child: ExpansionTile(
-                                  leading: const SizedBox(width: 30),
-                                  dense: true,
-                                  title: Align(
-                                    alignment: Alignment.center,
-                                    child: Text(userName.toUpperCase(),
-                                        style: userNameStyle),
-                                  ),
-                                  children: [
-                                    Align(
+                                  child: ExpansionTile(
+                                    leading: const SizedBox(width: 30),
+                                    dense: true,
+                                    title: Align(
                                       alignment: Alignment.center,
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(0.0),
-                                        child: Column(
-                                          children: [
-                                            if (event['description'] != null &&
-                                                event['description']!
-                                                    .isNotEmpty)
+                                      child: Text(userName.toUpperCase(),
+                                          style: userNameStyle),
+                                    ),
+                                    children: [
+                                      Align(
+                                        alignment: Alignment.center,
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(0.0),
+                                          child: Column(
+                                            children: [
+                                              if (event['title'] != null &&
+                                                  event['title']!.isNotEmpty)
+                                                Text(
+                                                  event['title'],
+                                                  style: userNameStyle,
+                                                ),
+                                              if (event['description'] !=
+                                                      null &&
+                                                  event['description']!
+                                                      .isNotEmpty)
+                                                Text(
+                                                  event['description'],
+                                                  style: userNameStyle,
+                                                ),
                                               Text(
-                                                event['title'],
+                                                '$startFormatted - $endFormatted',
                                                 style: userNameStyle,
                                               ),
-                                            Text(event['description'],
-                                                style: userNameStyle),
-                                            Text(
-                                              '$startFormatted - $endFormatted', // Mostra a hora de início e fim
-                                              style: userNameStyle,
-                                            ),
-                                          ],
+                                            ],
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
+                                );
+                              },
+                            );
+                          },
+                        );
+                      } else if (event['source'] == 'google') {
+                        // Eventos do Google Calendar: exibir com estilo simplificado
+                        final title = event['title'] ?? 'Evento';
+                        final startTime = event['start_time'];
+                        final endTime = event['end_time'];
+
+                        // Formatação das horas
+                        String startFormatted =
+                            startTime != null ? formatTime(startTime) : '';
+                        String endFormatted =
+                            endTime != null ? formatTime(endTime) : '';
+
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(15),
+                            color: Colors.blueGrey[
+                                100], // Cor padrão para eventos do Google Calendar
+                          ),
+                          child: ExpansionTile(
+                            leading: const SizedBox(width: 30),
+                            dense: true,
+                            title: Align(
+                              alignment: Alignment.center,
+                              child: Text(
+                                title.toUpperCase(),
+                                style: const TextStyle(
+                                  color: Colors.black,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 2.5,
+                                  fontSize: 14,
                                 ),
-                              );
-                            },
-                          );
-                        },
-                      );
+                              ),
+                            ),
+                            children: [
+                              Align(
+                                alignment: Alignment.center,
+                                child: Padding(
+                                  padding: const EdgeInsets.all(0.0),
+                                  child: Column(
+                                    children: [
+                                      if (event['description'] != null &&
+                                          event['description']!.isNotEmpty)
+                                        Text(
+                                          event['description'],
+                                          style: const TextStyle(
+                                            color: Colors.black,
+                                            fontWeight: FontWeight.bold,
+                                            letterSpacing: 2.5,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                      Text(
+                                        '$startFormatted - $endFormatted',
+                                        style: const TextStyle(
+                                          color: Colors.black,
+                                          fontWeight: FontWeight.bold,
+                                          letterSpacing: 2.5,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+                      return null;
                     },
                   ),
           )

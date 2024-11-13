@@ -1,7 +1,10 @@
+import 'dart:convert';
+import 'package:app_mensagem/services/auth/auth_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:googleapis/calendar/v3.dart' as calendar;
-import 'package:google_sign_in/google_sign_in.dart';
-import 'package:http/http.dart' as http;
+import 'package:googleapis_auth/auth_io.dart';
 
 class UserTaskListGoogle extends StatefulWidget {
   const UserTaskListGoogle({super.key});
@@ -11,49 +14,83 @@ class UserTaskListGoogle extends StatefulWidget {
 }
 
 class _UserTaskListGoogleState extends State<UserTaskListGoogle> {
-  final GoogleSignIn _googleSignIn = GoogleSignIn(
-    scopes: ['https://www.googleapis.com/auth/calendar.readonly'],
-  );
-
-  List<calendar.Event> _tasks = []; // Lista de eventos
-  bool _isLoading = true; // Indicador de carregamento
+  final AuthService authService = AuthService();
+  List<Map<String, dynamic>> googleCalendarEvents = [];
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _fetchGoogleCalendarTasks();
+    fetchCalendarAndEvents();
   }
-  /////////////////////
-  ///Método que busca as tarefas do google calendar do usuário autenticado
-  Future<void> _fetchGoogleCalendarTasks() async {
+
+  /////////////////////////
+  /// Método para obter o cliente do Google Calendar
+  Future<calendar.CalendarApi> getCalendarApiClient() async {
+    //Pegando as chaves de acesso de forma segura e privada
+    QuerySnapshot<Map<String, dynamic>> keySnapshot =
+        await FirebaseFirestore.instance.collection('key').get();
+    var keyDoc = keySnapshot.docs;
+    // Pegando as chaves do Firestore
+    String privateKey = keyDoc[0]['private_key'];
+    privateKey = privateKey.replaceAll("\\\\n", "\n");
+    String privateKeyId = keyDoc[1]['private_key_id'];
+
+// Inserindo corretamente os delimitadores no JSON
+    // Constrói o JSON de credenciais com a chave formatada corretamente
+    var jsonCredentials = '''
+  {
+    "type": "service_account",
+    "project_id": "chatapp-f6349",
+    "private_key_id": "$privateKeyId",
+    "private_key": "${privateKey.replaceAll('\n', '\\n')}",
+    "client_email": "firebase-adminsdk-uqeoc@chatapp-f6349.iam.gserviceaccount.com",
+    "client_id": "109927196779049391016",
+    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+    "token_uri": "https://oauth2.googleapis.com/token",
+    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+    "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-uqeoc%40chatapp-f6349.iam.gserviceaccount.com",
+    "universe_domain": "googleapis.com"
+  }
+  ''';
+
+    final credentials =
+        ServiceAccountCredentials.fromJson(json.decode(jsonCredentials));
+    final scopes = [calendar.CalendarApi.calendarScope];
+    var client = await clientViaServiceAccount(credentials, scopes);
+    return calendar.CalendarApi(client);
+  }
+
+  //////////////////////////
+  /// Método para obter o ID do calendário da empresa
+  Future<String> getCalendarId() async {
+    String uid = FirebaseAuth.instance.currentUser!.uid;
+    DocumentSnapshot userDoc =
+        await FirebaseFirestore.instance.collection('users').doc(uid).get();
+    return authService.getCalendarIdFromCompanyCode(userDoc['code']);
+  }
+
+  //////////////////////
+  /// Método para buscar os eventos do calendário Google
+  Future<void> fetchCalendarAndEvents() async {
     try {
-      final GoogleSignInAccount? account = await _googleSignIn.signIn();
-      if (account == null) {
-        throw 'Login cancelado pelo usuário';
-      }
+      String enterpriseCalendarId = await getCalendarId();
+      var calendarApi = await getCalendarApiClient();
+      var events = await calendarApi.events.list(enterpriseCalendarId);
 
-      final authHeaders = await account.authHeaders;
-      final httpClient = _GoogleHttpClient(authHeaders);
-
-      // Chamada para a API do Google Calendar
-      final calendarApi = calendar.CalendarApi(httpClient);
-      final now = DateTime.now().toUtc();
-      final events = await calendarApi.events.list(
-        'primary',
-        timeMin: now
-            .subtract(const Duration(days: 30)), // Buscar desde 30 dias atrás
-        timeMax:
-            now.add(const Duration(days: 365)), // Buscar até 1 ano no futuro
-        singleEvents: true,
-        orderBy: 'startTime',
-      );
-
-      setState(() {
-        _tasks = events.items ?? [];
-        _isLoading = false;
-      });
+      googleCalendarEvents = events.items?.map((event) {
+            return {
+              'title': event.summary ?? 'Tarefa sem título',
+              'start_time': event.start?.dateTime?.toString() ?? '',
+              'end_time': event.end?.dateTime?.toString() ?? '',
+              'description': event.description ?? '',
+              'source': 'google'
+            };
+          }).toList() ??
+          [];
     } catch (e) {
-      // print('Erro ao buscar tarefas: $e');
+      //
+    } finally {
       setState(() {
         _isLoading = false;
       });
@@ -64,83 +101,60 @@ class _UserTaskListGoogleState extends State<UserTaskListGoogle> {
   Widget build(BuildContext context) {
     if (_isLoading) {
       return const Center(
-          child: CircularProgressIndicator(
-        color: Colors.white,
-      ));
+          child: CircularProgressIndicator(color: Colors.white));
     }
 
-    if (_tasks.isEmpty) {
+    if (googleCalendarEvents.isEmpty) {
       return const Center(
           child: Text('Nenhuma tarefa encontrada no Google Calendar'));
     }
 
     return ListView.builder(
-      itemCount: _tasks.length,
+      itemCount: googleCalendarEvents.length,
       itemBuilder: (context, index) {
-        final event = _tasks[index];
-        final startTime = event.start?.dateTime ?? event.start?.date;
-        final endTime = event.end?.dateTime ?? event.end?.date;
-
-        return Column(
-          children: [
-            const SizedBox(height: 5),
-            Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(10),
-                color: const Color.fromARGB(255, 116, 111, 111),
-              ),
-              child: ListTile(
-                title: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      event.summary ?? 'Tarefa sem título',
-                      style: const TextStyle(
-                        fontSize: 20,
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-                subtitle: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      '${_formatDateTime(startTime)} - ${_formatDateTime(endTime)}',
-                      style: const TextStyle(
-                        fontSize: 15,
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        );
+        final event = googleCalendarEvents[index];
+        return _buildEventTile(event);
       },
     );
   }
-  //////////////////////
-  ///Método para formação de Data
-  String _formatDateTime(DateTime? dateTime) {
-    if (dateTime == null) return 'Sem data';
-    return '${dateTime.day}/${dateTime.month}/${dateTime.year} ${dateTime.hour}:${dateTime.minute}';
+
+  Widget _buildEventTile(Map<String, dynamic> event) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          color: const Color.fromARGB(255, 116, 111, 111),
+        ),
+        child: ListTile(
+          title: Center(
+            child: Text(
+              event['title'],
+              style: const TextStyle(
+                fontSize: 20,
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          subtitle: Center(
+            child: Text(
+              '${_formatDateTime(event['start_time'])} - ${_formatDateTime(event['end_time'])}',
+              style: const TextStyle(
+                fontSize: 15,
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
-}
 
-/////////////////////
-///Classe para requisição Http
-class _GoogleHttpClient extends http.BaseClient {
-  final Map<String, String> _headers;
-  final http.Client _client = http.Client();
-
-  _GoogleHttpClient(this._headers);
-
-  @override
-  Future<http.StreamedResponse> send(http.BaseRequest request) {
-    return _client.send(request..headers.addAll(_headers));
+  String _formatDateTime(String? dateTimeStr) {
+    if (dateTimeStr == null || dateTimeStr.isEmpty) return 'Sem data';
+    DateTime dateTime = DateTime.parse(dateTimeStr);
+    return '${dateTime.day}/${dateTime.month}/${dateTime.year} ${dateTime.hour}:${dateTime.minute.toString().padLeft(2, '0')}';
   }
 }

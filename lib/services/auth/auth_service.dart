@@ -3,8 +3,40 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:googleapis/calendar/v3.dart';
+import 'package:googleapis_auth/auth_io.dart';
 
 class AuthService extends ChangeNotifier {
+  
+  Future credentials() async {
+    //Pegando as chaves de acesso de forma segura e privada
+    QuerySnapshot<Map<String, dynamic>> keySnapshot =
+        await FirebaseFirestore.instance.collection('key').get();
+    var keyDoc = keySnapshot.docs;
+    // Pegando as chaves do Firestore
+    String privateKey = keyDoc[0]['private_key'];
+    privateKey = privateKey.replaceAll("\\\\n", "\n");
+    String privateKeyId = keyDoc[1]['private_key_id'];
+    //Configuração para autenticação da conta de serviço
+    final credentials = ServiceAccountCredentials.fromJson('''
+  {
+    "type": "service_account",
+    "project_id": "chatapp-f6349",
+    "private_key_id": "$privateKeyId",
+    "private_key": "${privateKey.replaceAll('\n', '\\n')}",
+    "client_email": "firebase-adminsdk-uqeoc@chatapp-f6349.iam.gserviceaccount.com",
+    "client_id": "109927196779049391016",
+    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+    "token_uri": "https://oauth2.googleapis.com/token",
+    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+    "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-uqeoc%40chatapp-f6349.iam.gserviceaccount.com",
+    "universe_domain": "googleapis.com"
+  }
+  ''');
+
+    return credentials;
+  }
+
   //Criando uma instãncia da classe de geração de cores
   TaskColorManager colorManager = TaskColorManager();
   //Lidar com os diferentes métodos de autenticação(Instancia do firebase_auth)
@@ -54,8 +86,10 @@ class AuthService extends ChangeNotifier {
           '#${userColor.value.toRadixString(16).padLeft(8, '0').toUpperCase()}';
 
       // Obter o documento da empresa com base no código da empresa
-      DocumentSnapshot enterpriseSnapshot =
-          await _firestore.collection('enterprise').doc(codeEnterprise.toLowerCase()).get();
+      DocumentSnapshot enterpriseSnapshot = await _firestore
+          .collection('enterprise')
+          .doc(codeEnterprise.toLowerCase())
+          .get();
 
       if (!enterpriseSnapshot.exists) {
         throw Exception('Empresa não encontrada');
@@ -75,15 +109,13 @@ class AuthService extends ChangeNotifier {
       });
 
       //Cria o usuário também na coleçao global 'users'
-      await _firestore.collection('users').doc(userCredential.user!.uid).set(
-        {
-          'uid': userCredential.user!.uid,
-          'email': email,
-          'userName': userName,
-          'color': colorHex,
-          'code': codeEnterprise.toLowerCase()
-        }
-      );
+      await _firestore.collection('users').doc(userCredential.user!.uid).set({
+        'uid': userCredential.user!.uid,
+        'email': email,
+        'userName': userName,
+        'color': colorHex,
+        'code': codeEnterprise.toLowerCase()
+      });
 
       return userCredential;
     } on FirebaseAuthException catch (e) {
@@ -189,5 +221,52 @@ class AuthService extends ChangeNotifier {
     } catch (error) {
       return invalidou;
     }
+  }
+
+  //////////////////////////////
+  /// Método para adicionar o calendário da empresa ao usuário cadastrado naquela empresa
+  Future<void> addUserToCalendarACL(
+      {required String companyCode, required String userEmail}) async {
+        
+       final credentialss = await credentials();
+    // Obter token de autenticação
+    var client = await clientViaServiceAccount(
+        credentialss, [CalendarApi.calendarScope]);
+
+    // Iniciar API Calendar
+    var calendar = CalendarApi(client);
+
+    // Obter o ID do calendário com base no código da empresa
+    String calendarId = await getCalendarIdFromCompanyCode(companyCode);
+
+    // Adicionar o e-mail ao ACL do calendário e adiciona regras de leitura, adição e exclusão de eventos no calendário
+    var rule = AclRule(
+      scope: AclRuleScope(
+        type: "user",
+        value: userEmail,
+      ),
+      role: "owner",
+    );
+
+    await calendar.acl.insert(rule, calendarId);
+  }
+
+  ////////////////////////////
+  /// Método para obter o ID do calendário
+  Future<String> getCalendarIdFromCompanyCode(String companyCode) async {
+    String calendarId = '';
+
+    QuerySnapshot snapshot =
+        await FirebaseFirestore.instance.collection('enterprise').get();
+
+    List<Map<String, dynamic>> enterprise =
+        snapshot.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
+    for (var document in enterprise) {
+      String enterpriseCode = document['code'];
+      if (enterpriseCode == companyCode) {
+        calendarId = document['calendar_id'];
+      }
+    }
+    return calendarId;
   }
 }

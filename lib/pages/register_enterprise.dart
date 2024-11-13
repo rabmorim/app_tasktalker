@@ -1,9 +1,13 @@
+import 'dart:convert';
+
 import 'package:app_mensagem/pages/recursos/button.dart';
 import 'package:app_mensagem/pages/recursos/logo.dart';
 import 'package:app_mensagem/pages/recursos/text_field.dart';
 import 'package:awesome_snackbar_content/awesome_snackbar_content.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:googleapis/calendar/v3.dart' as gcalendar;
+import 'package:googleapis_auth/auth_io.dart';
 
 class RegisterEnterprise extends StatefulWidget {
   const RegisterEnterprise({super.key});
@@ -96,6 +100,7 @@ class _RegisterEnterpriseState extends State<RegisterEnterprise> {
                     if (!isCnpjRegistered) {
                       await createEnterprise(
                           _codigoController.text, _cnpjController.text);
+
                       // ignore: use_build_context_synchronously
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
@@ -189,6 +194,10 @@ class _RegisterEnterpriseState extends State<RegisterEnterprise> {
   /// Método para criar a empresa no banco de dados
   Future<void> createEnterprise(String codigo, String cnpj) async {
     try {
+      // Primeiro, crie o calendário no Google Calendar
+      String calendarId = await createGoogleCalendar(codigo);
+
+      // Em seguida, registre a empresa no Firestore com o calendarId
       await FirebaseFirestore.instance
           .collection('enterprise')
           .doc(codigo.toLowerCase())
@@ -197,10 +206,56 @@ class _RegisterEnterpriseState extends State<RegisterEnterprise> {
           'code': codigo.toLowerCase(),
           'cnpj': cnpj,
           'created_at': DateTime.now().toIso8601String(),
+          'calendar_id': calendarId, // Armazene o ID do calendário
         },
       );
     } catch (e) {
       throw Exception('Erro ao cadastrar a empresa: $e');
     }
+  }
+
+  Future<String> createGoogleCalendar(String enterpriseCode) async {
+    //Pegando as chaves de acesso de forma segura e privada
+    QuerySnapshot<Map<String, dynamic>> keySnapshot =
+        await FirebaseFirestore.instance.collection('key').get();
+    var keyDoc = keySnapshot.docs;
+    // Pegando as chaves do Firestore
+    String privateKey = keyDoc[0]['private_key'];
+    privateKey = privateKey.replaceAll("\\\\n", "\n");
+    String privateKeyId = keyDoc[1]['private_key_id'];
+    var jsonString = '''
+  {
+    "type": "service_account",
+    "project_id": "chatapp-f6349",
+    "private_key_id": "$privateKeyId",
+    "private_key": "${privateKey.replaceAll('\n', '\\n')}",
+    "client_email": "firebase-adminsdk-uqeoc@chatapp-f6349.iam.gserviceaccount.com",
+    "client_id": "109927196779049391016",
+    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+    "token_uri": "https://oauth2.googleapis.com/token",
+    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+    "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-uqeoc%40chatapp-f6349.iam.gserviceaccount.com",
+    "universe_domain": "googleapis.com"
+  }
+  ''';
+
+    final serviceAccountCredentials = ServiceAccountCredentials.fromJson(
+      json.decode(jsonString),
+    );
+
+    final scopes = [gcalendar.CalendarApi.calendarScope];
+    final client =
+        await clientViaServiceAccount(serviceAccountCredentials, scopes);
+    final calendarApi = gcalendar.CalendarApi(client);
+
+    var newCalendar = gcalendar.Calendar()
+      ..summary = "Calendário da Empresa $enterpriseCode"
+      ..description =
+          "Calendário para a empresa $enterpriseCode no app TaskTalker";
+
+    final createdCalendar = await calendarApi.calendars.insert(newCalendar);
+    client.close();
+
+    return createdCalendar.id!; // Retorna o ID do calendário criado
   }
 }

@@ -1,13 +1,14 @@
-// import 'dart:convert';
+import 'dart:convert';
+import 'package:app_mensagem/services/auth/auth_service.dart';
+import 'package:dart_jsonwebtoken/dart_jsonwebtoken.dart';
+import 'package:http/http.dart' as http;
 import 'package:app_mensagem/pages/recursos/list_users_dropdown.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-// import 'package:http/http.dart' as http;
 import 'package:app_mensagem/pages/recursos/button.dart';
 import 'package:app_mensagem/pages/recursos/data_time_field.dart';
 import 'package:app_mensagem/pages/recursos/text_field.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-// import 'package:google_sign_in/google_sign_in.dart';
 import 'package:intl/intl.dart';
 
 class ModalForm extends StatefulWidget {
@@ -27,6 +28,8 @@ class _ModalFormState extends State<ModalForm> {
   int reminderMinutes = 10; // Valor padrão de 10 minutos
   //Variável para o tipo de notificação padrão
   String notification = 'popup';
+  //Obtendo o serviço de autenticação
+  final authService = AuthService();
 
   // Lista de opções para o tempo de lembrete
   final List<int> reminderOptions = [5, 10, 15, 30, 60, 120]; // Minutos
@@ -172,6 +175,17 @@ class _ModalFormState extends State<ModalForm> {
 
                     //Verificação se um usuário foi selecionado
                     if (selectedUser != null) {
+                      String? uid = FirebaseAuth.instance.currentUser!.uid;
+                      DocumentSnapshot userDoc = await FirebaseFirestore
+                          .instance
+                          .collection('users')
+                          .doc(uid)
+                          .get();
+
+                      String enterpriseCode = userDoc['code'];
+                      var calendarId = await authService
+                          .getCalendarIdFromCompanyCode(enterpriseCode);
+
                       //Criar o registro da tarefa no Firestore para o usuário selecionada
                       await delegateTaskToUser(
                           selectedUser!,
@@ -179,12 +193,15 @@ class _ModalFormState extends State<ModalForm> {
                           descriptionTextField.text,
                           dateTimeInitial,
                           dateTimeEnd);
-                      // ignore: use_build_context_synchronously
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Evento adicionado com sucesso!'),
-                        ),
-                      );
+                      //Cria a tarefa no google calendar
+                      await addEventToCalendar(
+                          calendarId: calendarId,
+                          title: eventTextField.text,
+                          description: descriptionTextField.text,
+                          startTimeText: dataInitialField.text,
+                          endTimeText: dataEndField.text,
+                          reminderMinutes: reminderMinutes,
+                          notification: notification);
                     } else {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
@@ -192,23 +209,6 @@ class _ModalFormState extends State<ModalForm> {
                         ),
                       );
                     }
-
-                    // // Primeiro, crie o evento em formato JSON
-                    // var jsonEvent = await eventToJson(
-                    //     eventTextField.text,
-                    //     descriptionTextField.text,
-                    //     dateTimeInitial,
-                    //     dateTimeEnd,
-                    //     reminderMinutes,
-                    //     notification);
-
-                    // // Em seguida, faça a autenticação com o Google para obter o token
-                    // String? accessToken = await signInWithGoogle();
-
-                    // if (accessToken != null) {
-                    //   // Finalmente, adicione o evento ao Google Calendar usando o token e o JSON do evento
-                    //   await addEventToCalendar(accessToken, jsonEvent);
-                    // }
                   },
                   text: 'Adicionar ao Calendário',
                 ),
@@ -220,101 +220,149 @@ class _ModalFormState extends State<ModalForm> {
     );
   }
 
-// //Transformando o evento preenchido em json para o google interpretar
-//   Future<dynamic> eventToJson(
-//       String title,
-//       String description,
-//       DateTime dateTimeIntial,
-//       DateTime dateTimeEnd,
-//       int reminderMinutes,
-//       String notification) async {
-//     final json = {
-//       'summary': title,
-//       'description': description,
-//       'start': {
-//         'dateTime': dateTimeIntial.toIso8601String(),
-//         'timeZone': 'America/Sao_Paulo'
-//       },
-//       'end': {
-//         'dateTime': dateTimeEnd.toIso8601String(),
-//         'timeZone': 'America/Sao_Paulo'
-//       },
-//       'reminders': {
-//         'useDefault': false,
-//         'overrides': [
-//           {
-//             'method': notification,
-//             'minutes': reminderMinutes
-//           }, // Lembrete personalizado
-//         ],
-//       }
-//     };
-//     return json;
-//   }
+//Transformando o evento preenchido em json para o google interpretar
+  Future<dynamic> eventToJson(
+      String title,
+      String description,
+      DateTime dateTimeIntial,
+      DateTime dateTimeEnd,
+      int reminderMinutes,
+      String notification) async {
+    final json = {
+      'summary': title,
+      'description': description,
+      'start': {
+        'dateTime': dateTimeIntial.toIso8601String(),
+        'timeZone': 'America/Sao_Paulo'
+      },
+      'end': {
+        'dateTime': dateTimeEnd.toIso8601String(),
+        'timeZone': 'America/Sao_Paulo'
+      },
+      'reminders': {
+        'useDefault': false,
+        'overrides': [
+          {
+            'method': notification,
+            'minutes': reminderMinutes
+          }, // Lembrete personalizado
+        ],
+      },
+      'source': 'google'
+    };
+    return json;
+  }
 
-  // //Usando a autenticação do google para conseguir o token e se ligar ao google calendar
-  // Future<String?> signInWithGoogle() async {
-  //   try {
-  //     final GoogleSignIn googleSignIn = GoogleSignIn(
-  //       scopes: <String>[
-  //         'https://www.googleapis.com/auth/calendar',
-  //         'https://www.googleapis.com/auth/calendar.events'
-  //       ],
-  //     );
+// Função para gerar e obter o access token
+  Future<String> getAccessToken() async {
+    const serviceAccountEmail =
+        'firebase-adminsdk-uqeoc@chatapp-f6349.iam.gserviceaccount.com';
+    // Pegando as chaves de acesso de forma segura e privada do Firestore
+    QuerySnapshot<Map<String, dynamic>> keySnapshot =
+        await FirebaseFirestore.instance.collection('key').get();
+    var keyDoc = keySnapshot.docs;
+    // Pegando as chaves do Firestore
+    String privateKey = keyDoc[0]['private_key'];
+    privateKey = privateKey.replaceAll("\\\\n", "\n"); // Corrige quebras de linha
 
-  //     final GoogleSignInAccount? googleSignInAccount =
-  //         await googleSignIn.signIn();
-  //     final GoogleSignInAuthentication googleSignInAuthentication =
-  //         await googleSignInAccount!.authentication;
-  //     //Pegando o Id do usuário
-  //     String? userId = selectedUser!;
-  //     await FirebaseFirestore.instance.collection('users').doc(userId).set(
-  //       {'googleAccessToken': googleSignInAuthentication.accessToken},
-  //       SetOptions(merge: true),
-  //     );
-  //     return googleSignInAuthentication.accessToken;
-  //   } catch (error) {
-  //     // ignore: use_build_context_synchronously
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       SnackBar(
-  //         content: Text(
-  //           error.toString(),
-  //         ),
-  //       ),
-  //     );
-  //     return null;
-  //   }
-  // }
+    // Configuração do JWT Header e Claims
+    final jwt = JWT(
+      {
+        "iss": serviceAccountEmail,
+        "scope": "https://www.googleapis.com/auth/calendar",
+        "aud": "https://oauth2.googleapis.com/token",
+        "exp": (DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600,
+        "iat": DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      },
+    );
 
-  // //Adiciona o evento ao calendário
-  // Future addEventToCalendar(String accessToken, dynamic jsonEvent) async {
-  //   final headers = {
-  //     'Authorization': 'Bearer $accessToken',
-  //     'Content-Type': 'application/json'
-  //   };
+    // Removendo as linhas PEM e criando uma chave privada RSA
+    final privateKeyObject = RSAPrivateKey(privateKey);
 
-  //   final response = await http.post(
-  //     Uri.parse(
-  //         'https://www.googleapis.com/calendar/v3/calendars/primary/events'),
-  //     headers: headers,
-  //     body: jsonEncode(jsonEvent),
-  //   );
-  //   if (response.statusCode == 200) {
-  //     // ignore: use_build_context_synchronously
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       const SnackBar(
-  //         content: Text('Evento adicionado com sucesso!'),
-  //       ),
-  //     );
-  //   } else {
-  //     // ignore: use_build_context_synchronously
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       SnackBar(
-  //         content: Text('Error ao inserir o evento ${response.statusCode}'),
-  //       ),
-  //     );
-  //   }
-  // }
+    // Assinando o JWT com o algoritmo RS256
+    final token = jwt.sign(
+      privateKeyObject,
+      algorithm: JWTAlgorithm.RS256,
+    );
+
+    // Enviar o token JWT para obter o access token do Google OAuth
+    final response = await http.post(
+      Uri.parse("https://oauth2.googleapis.com/token"),
+      body: {
+        "grant_type": "urn:ietf:params:oauth:grant-type:jwt-bearer",
+        "assertion": token,
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final responseData = json.decode(response.body);
+      return responseData["access_token"];
+    } else {
+      throw Exception("Failed to obtain access token: ${response.body}");
+    }
+  }
+
+  Future<void> addEventToCalendar({
+    required String calendarId,
+    required String title,
+    required String description,
+    required String startTimeText,
+    required String endTimeText,
+    required int reminderMinutes,
+    required String notification,
+  }) async {
+    // Obtendo o access token usando o método com o JWT assinado
+    final accessToken = await getAccessToken();
+
+    // Configurando as datas de início e fim no formato correto
+    DateTime startTime = DateFormat('dd/MM/yyyy HH:mm').parse(startTimeText);
+    DateTime endTime = DateFormat('dd/MM/yyyy HH:mm').parse(endTimeText);
+
+    // Formatando o evento para o formato JSON exigido pela API do Google Calendar
+    final eventJson = await eventToJson(
+      title,
+      description,
+      startTime,
+      endTime,
+      reminderMinutes,
+      notification,
+    );
+
+    // Cabeçalhos da requisição com o token de autenticação
+    final headers = {
+      'Authorization': 'Bearer $accessToken',
+      'Content-Type': 'application/json',
+    };
+
+    try {
+      // Enviando a requisição para criar o evento no Google Calendar
+      final response = await http.post(
+        Uri.parse(
+            'https://www.googleapis.com/calendar/v3/calendars/$calendarId/events'),
+        headers: headers,
+        body: jsonEncode(eventJson),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        // ignore: use_build_context_synchronously
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Evento Adicionado com Sucesso!'),
+          ),
+        );
+      } else {
+        // ignore: use_build_context_synchronously
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                "Erro ao adicionar evento: ${response.statusCode} - ${response.body}"),
+          ),
+        );
+      }
+    } catch (e) {
+      //
+    }
+  }
 
   ///////////////////////
   /// Método para delegar a tarefa para o Firestore
@@ -347,6 +395,7 @@ class _ModalFormState extends State<ModalForm> {
           'start_time': startTime.toIso8601String(),
           'end_time': endTime.toIso8601String(),
           'created_at': DateTime.now().toIso8601String(),
+          'source': 'app'
         },
       );
     } else {

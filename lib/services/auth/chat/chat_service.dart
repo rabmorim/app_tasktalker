@@ -84,7 +84,7 @@ class ChatService extends ChangeNotifier {
           .update({'message': newMessageContent, 'timestamp': Timestamp.now()});
       notifyListeners(); // Notifica sobre a atualização
     } catch (e) {
-      print("Erro ao atualizar a mensagem: $e");
+      //
     }
   }
 
@@ -107,7 +107,7 @@ class ChatService extends ChangeNotifier {
           .delete();
       notifyListeners(); // Notifica sobre a exclusão
     } catch (e) {
-      print("Erro ao excluir a mensagem: $e");
+      //
     }
   }
 }
