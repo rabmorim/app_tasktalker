@@ -98,29 +98,29 @@ class _RegisterState extends State<Register> {
     try {
       await authService.signUpWithEmailAndPassword(_emailController.text,
           _passwordController.text, _userName.text, _codeController.text);
+
+      // Adicionar o usuário à ACL do calendário da empresa
+      await authService.addUserToCalendarACL(
+        companyCode: _codeController.text,
+        userEmail: userEmail,
+      );
+      // Confirmação de sucesso
+      // ignore: use_build_context_synchronously
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Usuário cadastrado e adicionado ao calendário!'),
+        ),
+      );
     } catch (e) {
       // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        const SnackBar(
           content: Text(
-            e.toString(),
+            "vai tomar no cu",
           ),
         ),
       );
     }
-    // Adicionar o usuário à ACL do calendário da empresa
-    await authService.addUserToCalendarACL(
-      companyCode: _codeController.text,
-      userEmail: userEmail,
-    );
-
-    // Confirmação de sucesso
-    // ignore: use_build_context_synchronously
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Usuário cadastrado e adicionado ao calendário!'),
-      ),
-    );
   }
 
   @override
