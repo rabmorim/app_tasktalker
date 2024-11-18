@@ -60,7 +60,7 @@ class _ModalFormState extends State<ModalForm> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const SizedBox(
-                height: 5,
+                height: 30,
               ),
               UserListDropdown(
                 onUserSelected: (userId) {
@@ -73,7 +73,7 @@ class _ModalFormState extends State<ModalForm> {
               ),
               //Espaçamento entre os campos
               const SizedBox(
-                height: 2,
+                height: 10,
               ),
               SizedBox(
                 width: tela.width - 150,

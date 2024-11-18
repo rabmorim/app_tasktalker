@@ -627,15 +627,16 @@ class _CalendarPageState extends State<CalendarPage> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          showModalBottomSheet(
-            backgroundColor: const Color(0xff303030),
-            context: context,
-            builder: (context) {
-              return const Padding(
-                padding: EdgeInsets.all(16),
-                child: ModalForm(),
-              );
-            },
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              fullscreenDialog: true,
+              builder: (context) => Scaffold(
+                appBar: AppBar(
+                  title: const Text('Adicione uma Tarefa '),
+                ),
+                body: const ModalForm(),
+              ),
+            ),
           );
         },
         backgroundColor: Colors.grey,
