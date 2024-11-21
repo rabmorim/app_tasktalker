@@ -5,10 +5,13 @@ import 'package:flutter/material.dart';
 class UserListDropdown extends StatefulWidget {
   final Function(String)?
       onUserSelected; // Callback para quando o usuário for selecionado
+   final String?
+      selectedUser; // Usuário pré-selecionado. Para modo de edição
 
   const UserListDropdown(
       {super.key,
-      this.onUserSelected}); // Adicionando o parâmetro ao construtor
+      this.onUserSelected,
+      this.selectedUser}); // Adicionando o parâmetro ao construtor
 
   @override
   State<UserListDropdown> createState() => _UserListDropdownState();
@@ -18,11 +21,13 @@ class _UserListDropdownState extends State<UserListDropdown> {
   String? selectedUser; // Variável para armazenar o usuário selecionado
   String?
       enterpriseCode; //Variavel para armazenar o código da empresa do usuário autenticado
+  
 
   @override
   void initState() {
     super.initState();
     _fetchUserEnterpriseCode();
+    selectedUser = widget.selectedUser; // Inicializar com o usuário pré-selecionado
   }
   /////////////////////////////////////
   /// Método para buscar o código da empresa do usuário autenticado

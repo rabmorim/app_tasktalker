@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:app_mensagem/pages/recursos/barra_superior.dart';
 import 'package:app_mensagem/pages/recursos/drawer.dart';
 import 'package:app_mensagem/pages/recursos/get_user.dart';
+import 'package:app_mensagem/pages/recursos/modal_edit.dart';
 import 'package:app_mensagem/pages/recursos/modal_form.dart';
 import 'package:app_mensagem/pages/recursos/task_color_manager.dart';
 import 'package:app_mensagem/services/auth/auth_service.dart';
@@ -33,6 +34,8 @@ class _CalendarPageState extends State<CalendarPage> {
   // Listas separadas para eventos de Firestore e Google Calendar
   List<Map<String, dynamic>> firestoreEvents = [];
   List<Map<String, dynamic>> googleCalendarEvents = [];
+  //Pegando a instância do usuário autenticado
+  final FirebaseAuth firebaseAuth = FirebaseAuth.instance;
 
   @override
   void initState() {
@@ -271,6 +274,88 @@ class _CalendarPageState extends State<CalendarPage> {
     return groupedEvents;
   }
 
+///////////////////////////////
+  /// Método para deletar um evento
+  Future<void> _deleteEvent(String eventId, String companyId) async {
+    final confirm = await showDeleteConfirmationDialog();
+
+    if (confirm == true) {
+      try {
+        await authService.deleteEvent(eventId: eventId, companyId: companyId);
+        // ignore: use_build_context_synchronously
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Evento excluído com sucesso!")),
+        );
+      } catch (e) {
+        // ignore: use_build_context_synchronously
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Erro ao excluir evento: $e")),
+        );
+      }
+    }
+  }
+
+///////////////////////////////////
+  /// Método para criação do balão para confirmação de exclusão
+  Future<bool?> showDeleteConfirmationDialog() async {
+    return await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Excluir Evento'),
+          content: const Text('Tem certeza de que deseja excluir este evento?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text(
+                'Cancelar',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text(
+                'Excluir',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  ////////////////////////
+  /// Método para Editar eventos
+  void _editEvent(
+      Map<String, dynamic> event, String eventId, String companyId) {
+    showEditEventModal(
+      context: context,
+      event: event,
+      onEventEdited: (updatedEvent) async {
+        try {
+          await AuthService().editEvent(
+            eventId: eventId,
+            companyId: companyId,
+            updatedData: updatedEvent,
+          );
+          // ignore: use_build_context_synchronously
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Evento atualizado com sucesso!")),
+          );
+          setState(() {
+            // Atualizar a exibição dos eventos
+          });
+        } catch (e) {
+          // ignore: use_build_context_synchronously
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("Erro ao atualizar evento: $e")),
+          );
+        }
+      },
+    );
+  }
+
   /////////////////////////////
   ///Método que controla o formato do calendário escolhido pelo usuário
   void _handleFormatChange(CalendarFormat format) {
@@ -441,160 +526,208 @@ class _CalendarPageState extends State<CalendarPage> {
           ),
           const SizedBox(height: 8.0),
           Expanded(
-            child: _selectedEvents.isEmpty
-                ? const Center(
-                    child: Text('Nenhum evento'),
-                  )
-                : ListView.builder(
-                    itemCount: _selectedEvents.length,
-                    itemBuilder: (context, index) {
-                      final event = _selectedEvents[index];
+              child: _selectedEvents.isEmpty
+                  ? const Center(
+                      child: Text('Nenhum evento'),
+                    )
+                  : ListView.builder(
+                      itemCount: _selectedEvents.length,
+                      itemBuilder: (context, index) {
+                        final event = _selectedEvents[index];
 
-                      if (event['source'] == 'app') {
-                        // Eventos do Firestore: exibir com cor e nome do usuário
-                        var userId = event['assigned_to'];
-                        final startTime = event['start_time'];
-                        final endTime = event['end_time'];
+                        if (event['source'] == 'app') {
+                          var userId = event['assigned_to'];
+                          final startTime = event['start_time'];
+                          final endTime = event['end_time'];
 
-                        // Formatação das horas (apenas se houver 'dateTime' nos eventos)
-                        String startFormatted =
-                            startTime != null ? formatTime(startTime) : '';
-                        String endFormatted =
-                            endTime != null ? formatTime(endTime) : '';
+                          String startFormatted =
+                              startTime != null ? formatTime(startTime) : '';
+                          String endFormatted =
+                              endTime != null ? formatTime(endTime) : '';
 
-                        // FutureBuilder para carregar a cor e o nome do usuário
-                        return FutureBuilder<Color?>(
-                          future: colorManager.getUserColor(userId ?? ""),
-                          builder: (context, snapshotColor) {
-                            Color userColor = snapshotColor.data ?? Colors.grey;
+                          return FutureBuilder<Color?>(
+                            future: colorManager.getUserColor(userId ?? ""),
+                            builder: (context, snapshotColor) {
+                              Color userColor =
+                                  snapshotColor.data ?? Colors.grey;
+                              DateTime now = DateTime.now();
+                              DateTime endTimeParsed =
+                                  DateTime.parse(event['end_time']);
+                              bool isExpired = endTimeParsed.isBefore(now);
 
-                            // Verificar se o evento já terminou
-                            DateTime now = DateTime.now();
-                            DateTime endTimeParsed =
-                                DateTime.parse(event['end_time']);
-                            bool isExpired = endTimeParsed.isBefore(now);
+                              Color backgroundColor = isExpired
+                                  ? Colors.white.withOpacity(0.8)
+                                  : userColor;
 
-                            // Definir cor de fundo com base na expiração
-                            Color backgroundColor = isExpired
-                                ? Colors.white.withOpacity(0.8)
-                                : userColor;
+                              return FutureBuilder<String?>(
+                                future: getUserName.getUserName(userId ?? ""),
+                                builder: (context, snapshotName) {
+                                  String userName = snapshotName.data ?? '';
+                                  TextStyle userNameStyle = isExpired
+                                      ? const TextStyle(
+                                          color: Colors.black,
+                                          decoration:
+                                              TextDecoration.lineThrough,
+                                          decorationThickness: 2,
+                                          fontSize: 14,
+                                          decorationColor: Colors.black)
+                                      : const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                          letterSpacing: 2.5,
+                                          fontSize: 14,
+                                        );
 
-                            // FutureBuilder para carregar o nome do usuário
-                            return FutureBuilder<String?>(
-                              future: getUserName.getUserName(userId ?? ""),
-                              builder: (context, snapshotName) {
-                                String userName = snapshotName.data ?? '';
-
-                                // Estilo do nome, com riscado se expirado
-                                TextStyle userNameStyle = isExpired
-                                    ? const TextStyle(
-                                        color: Colors.black,
-                                        decoration: TextDecoration.lineThrough,
-                                        decorationThickness: 2,
-                                        fontSize: 14,
-                                        decorationColor: Colors.black)
-                                    : const TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                        letterSpacing: 2.5,
-                                        fontSize: 14,
-                                      );
-
-                                return Container(
-                                  margin: const EdgeInsets.only(bottom: 8),
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(15),
-                                    color: backgroundColor,
-                                  ),
-                                  child: ExpansionTile(
-                                    leading: const SizedBox(width: 30),
-                                    dense: true,
-                                    title: Align(
-                                      alignment: Alignment.center,
-                                      child: Text(userName.toUpperCase(),
-                                          style: userNameStyle),
-                                    ),
-                                    children: [
-                                      Align(
-                                        alignment: Alignment.center,
-                                        child: Padding(
-                                          padding: const EdgeInsets.all(0.0),
-                                          child: Column(
-                                            children: [
-                                              if (event['title'] != null &&
-                                                  event['title']!.isNotEmpty)
-                                                Text(
-                                                  event['title'],
-                                                  style: userNameStyle,
-                                                ),
-                                              if (event['description'] !=
-                                                      null &&
-                                                  event['description']!
-                                                      .isNotEmpty)
-                                                Text(
-                                                  event['description'],
-                                                  style: userNameStyle,
-                                                ),
-                                              Text(
-                                                '$startFormatted - $endFormatted',
-                                                style: userNameStyle,
-                                              ),
-                                            ],
+                                  return GestureDetector(
+                                    onLongPressStart:
+                                        (LongPressStartDetails details) {
+                                      if (userId ==
+                                          firebaseAuth.currentUser!.uid) {
+                                        // Verificar permissão
+                                        showMenu(
+                                          context: context,
+                                          position: RelativeRect.fromLTRB(
+                                            details.globalPosition.dx,
+                                            details.globalPosition.dy,
+                                            details.globalPosition.dx,
+                                            details.globalPosition.dy,
                                           ),
-                                        ),
+                                          items: [
+                                            PopupMenuItem<String>(
+                                              value: 'Editar',
+                                              child: const ListTile(
+                                                leading: Icon(Icons.edit),
+                                                title: Text('Editar'),
+                                              ),
+                                              onTap: () => _editEvent(event,
+                                                  event['uid'], event['code']),
+                                            ),
+                                            PopupMenuItem<String>(
+                                              value: 'Excluir',
+                                              child: const ListTile(
+                                                leading: Icon(Icons.delete),
+                                                title: Text('Excluir'),
+                                              ),
+                                              onTap: () => _deleteEvent(
+                                                  event['uid'], event['code']),
+                                            ),
+                                          ],
+                                        );
+                                      } else {
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          const SnackBar(
+                                            content: Text(
+                                                'Você não tem permissão para editar este evento.'),
+                                          ),
+                                        );
+                                      }
+                                    },
+                                    child: Container(
+                                      margin: const EdgeInsets.only(bottom: 8),
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(15),
+                                        color: backgroundColor,
                                       ),
-                                    ],
+                                      child: ExpansionTile(
+                                        leading: const SizedBox(width: 30),
+                                        dense: true,
+                                        title: Align(
+                                          alignment: Alignment.center,
+                                          child: Text(userName.toUpperCase(),
+                                              style: userNameStyle),
+                                        ),
+                                        children: [
+                                          Align(
+                                            alignment: Alignment.center,
+                                            child: Padding(
+                                              padding:
+                                                  const EdgeInsets.all(0.0),
+                                              child: Column(
+                                                children: [
+                                                  if (event['title'] != null &&
+                                                      event['title']!
+                                                          .isNotEmpty)
+                                                    Text(
+                                                      event['title'],
+                                                      style: userNameStyle,
+                                                    ),
+                                                  if (event['description'] !=
+                                                          null &&
+                                                      event['description']!
+                                                          .isNotEmpty)
+                                                    Text(
+                                                      event['description'],
+                                                      style: userNameStyle,
+                                                    ),
+                                                  Text(
+                                                    '$startFormatted - $endFormatted',
+                                                    style: userNameStyle,
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
+                              );
+                            },
+                          );
+                        } else if (event['source'] == 'google') {
+                          final title = event['title'] ?? 'Evento';
+                          final startTime = event['start_time'];
+                          final endTime = event['end_time'];
+
+                          String startFormatted =
+                              startTime != null ? formatTime(startTime) : '';
+                          String endFormatted =
+                              endTime != null ? formatTime(endTime) : '';
+
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(15),
+                              color: Colors.blueGrey[
+                                  100], // Cor padrão para eventos do Google Calendar
+                            ),
+                            child: ExpansionTile(
+                              leading: const SizedBox(width: 30),
+                              dense: true,
+                              title: Align(
+                                alignment: Alignment.center,
+                                child: Text(
+                                  title.toUpperCase(),
+                                  style: const TextStyle(
+                                    color: Colors.black,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 2.5,
+                                    fontSize: 14,
                                   ),
-                                );
-                              },
-                            );
-                          },
-                        );
-                      } else if (event['source'] == 'google') {
-                        // Eventos do Google Calendar: exibir com estilo simplificado
-                        final title = event['title'] ?? 'Evento';
-                        final startTime = event['start_time'];
-                        final endTime = event['end_time'];
-
-                        // Formatação das horas
-                        String startFormatted =
-                            startTime != null ? formatTime(startTime) : '';
-                        String endFormatted =
-                            endTime != null ? formatTime(endTime) : '';
-
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 8),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(15),
-                            color: Colors.blueGrey[
-                                100], // Cor padrão para eventos do Google Calendar
-                          ),
-                          child: ExpansionTile(
-                            leading: const SizedBox(width: 30),
-                            dense: true,
-                            title: Align(
-                              alignment: Alignment.center,
-                              child: Text(
-                                title.toUpperCase(),
-                                style: const TextStyle(
-                                  color: Colors.black,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 2.5,
-                                  fontSize: 14,
                                 ),
                               ),
-                            ),
-                            children: [
-                              Align(
-                                alignment: Alignment.center,
-                                child: Padding(
-                                  padding: const EdgeInsets.all(0.0),
-                                  child: Column(
-                                    children: [
-                                      if (event['description'] != null &&
-                                          event['description']!.isNotEmpty)
+                              children: [
+                                Align(
+                                  alignment: Alignment.center,
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(0.0),
+                                    child: Column(
+                                      children: [
+                                        if (event['description'] != null &&
+                                            event['description']!.isNotEmpty)
+                                          Text(
+                                            event['description'],
+                                            style: const TextStyle(
+                                              color: Colors.black,
+                                              fontWeight: FontWeight.bold,
+                                              letterSpacing: 2.5,
+                                              fontSize: 14,
+                                            ),
+                                          ),
                                         Text(
-                                          event['description'],
+                                          '$startFormatted - $endFormatted',
                                           style: const TextStyle(
                                             color: Colors.black,
                                             fontWeight: FontWeight.bold,
@@ -602,27 +735,17 @@ class _CalendarPageState extends State<CalendarPage> {
                                             fontSize: 14,
                                           ),
                                         ),
-                                      Text(
-                                        '$startFormatted - $endFormatted',
-                                        style: const TextStyle(
-                                          color: Colors.black,
-                                          fontWeight: FontWeight.bold,
-                                          letterSpacing: 2.5,
-                                          fontSize: 14,
-                                        ),
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
                                 ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }
-                      return null;
-                    },
-                  ),
-          )
+                              ],
+                            ),
+                          );
+                        }
+                        return null;
+                      },
+                    ))
         ],
       ),
       floatingActionButton: FloatingActionButton(

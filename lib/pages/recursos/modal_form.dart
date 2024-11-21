@@ -263,7 +263,8 @@ class _ModalFormState extends State<ModalForm> {
     var keyDoc = keySnapshot.docs;
     // Pegando as chaves do Firestore
     String privateKey = keyDoc[0]['private_key'];
-    privateKey = privateKey.replaceAll("\\\\n", "\n"); // Corrige quebras de linha
+    privateKey =
+        privateKey.replaceAll("\\\\n", "\n"); // Corrige quebras de linha
 
     // Configuração do JWT Header e Claims
     final jwt = JWT(
@@ -366,6 +367,8 @@ class _ModalFormState extends State<ModalForm> {
 
   ///////////////////////
   /// Método para delegar a tarefa para o Firestore
+  ///////////////////////
+  /// Método para delegar a tarefa para o Firestore e armazenar o UID
   Future<void> delegateTaskToUser(
     String userId,
     String title,
@@ -382,8 +385,8 @@ class _ModalFormState extends State<ModalForm> {
     if (userDoc.exists) {
       String enterpriseCode = userDoc['code'];
 
-      // Adiciona a tarefa na subcoleção 'tasks' dentro da empresa do usuário autenticado
-      await FirebaseFirestore.instance
+      // Cria a tarefa na subcoleção 'tasks' dentro da empresa do usuário autenticado
+      DocumentReference taskRef = await FirebaseFirestore.instance
           .collection('enterprise')
           .doc(enterpriseCode)
           .collection('tasks')
@@ -395,9 +398,13 @@ class _ModalFormState extends State<ModalForm> {
           'start_time': startTime.toIso8601String(),
           'end_time': endTime.toIso8601String(),
           'created_at': DateTime.now().toIso8601String(),
-          'source': 'app'
+          'source': 'app',
+          'code': enterpriseCode,
         },
       );
+
+      // Atualiza o documento recém-criado para incluir o UID
+      await taskRef.update({'uid': taskRef.id});
     } else {
       throw Exception("Empresa do usuário não encontrada.");
     }

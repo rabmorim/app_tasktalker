@@ -7,7 +7,6 @@ import 'package:googleapis/calendar/v3.dart';
 import 'package:googleapis_auth/auth_io.dart';
 
 class AuthService extends ChangeNotifier {
-  
   Future credentials() async {
     //Pegando as chaves de acesso de forma segura e privada
     QuerySnapshot<Map<String, dynamic>> keySnapshot =
@@ -227,8 +226,7 @@ class AuthService extends ChangeNotifier {
   /// Método para adicionar o calendário da empresa ao usuário cadastrado naquela empresa
   Future<void> addUserToCalendarACL(
       {required String companyCode, required String userEmail}) async {
-        
-       final credentialss = await credentials();
+    final credentialss = await credentials();
     // Obter token de autenticação
     var client = await clientViaServiceAccount(
         credentialss, [CalendarApi.calendarScope]);
@@ -268,5 +266,42 @@ class AuthService extends ChangeNotifier {
       }
     }
     return calendarId;
+  }
+
+  ///////////////////
+  ///  Método para editar um evento no firestore
+  Future<void> editEvent({
+    required String eventId,
+    required String companyId,
+    required Map<String, dynamic> updatedData,
+  }) async {
+    try {
+      await _firestore
+          .collection('enterprise')
+          .doc(companyId)
+          .collection('tasks')
+          .doc(eventId)
+          .update(updatedData);
+    } catch (e) {
+      rethrow; // Relança o erro para tratamento externo
+    }
+  }
+
+  ///////////////////////
+  /// Método para Excluir um evento do Firestore
+  Future<void> deleteEvent({
+    required String eventId,
+    required String companyId,
+  }) async {
+    try {
+      await _firestore
+          .collection('enterprise')
+          .doc(companyId)
+          .collection('tasks')
+          .doc(eventId)
+          .delete();
+    } catch (e) {
+      rethrow; // Relança o erro para tratamento externo
+    }
   }
 }
