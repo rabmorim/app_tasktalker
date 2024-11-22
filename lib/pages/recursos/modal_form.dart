@@ -167,45 +167,73 @@ class _ModalFormState extends State<ModalForm> {
                 width: tela.width - 150,
                 child: MyButton(
                   onTap: () async {
-                    // Obter as datas a partir dos campos MyDateTimeField
-                    DateTime dateTimeInitial = DateFormat('dd/MM/yyyy HH:mm')
-                        .parse(dataInitialField.text);
-                    DateTime dateTimeEnd =
-                        DateFormat('dd/MM/yyyy HH:mm').parse(dataEndField.text);
+                    try {
+                      // Obter as datas a partir dos campos MyDateTimeField
+                      DateTime dateTimeInitial = DateFormat('dd/MM/yyyy HH:mm')
+                          .parse(dataInitialField.text);
+                      DateTime dateTimeEnd = DateFormat('dd/MM/yyyy HH:mm')
+                          .parse(dataEndField.text);
 
-                    //Verificação se um usuário foi selecionado
-                    if (selectedUser != null) {
-                      String? uid = FirebaseAuth.instance.currentUser!.uid;
-                      DocumentSnapshot userDoc = await FirebaseFirestore
-                          .instance
-                          .collection('users')
-                          .doc(uid)
-                          .get();
+                      if (selectedUser != null) {
+                        String uid = FirebaseAuth.instance.currentUser!.uid;
 
-                      String enterpriseCode = userDoc['code'];
-                      var calendarId = await authService
-                          .getCalendarIdFromCompanyCode(enterpriseCode);
+                        // Obter o código da empresa do usuário autenticado
+                        DocumentSnapshot userDoc = await FirebaseFirestore
+                            .instance
+                            .collection('users')
+                            .doc(uid)
+                            .get();
+                        String enterpriseCode = userDoc['code'];
 
-                      //Criar o registro da tarefa no Firestore para o usuário selecionada
-                      await delegateTaskToUser(
-                          selectedUser!,
-                          eventTextField.text,
-                          descriptionTextField.text,
-                          dateTimeInitial,
-                          dateTimeEnd);
-                      //Cria a tarefa no google calendar
-                      await addEventToCalendar(
+                        // Obter o ID do calendário vinculado à empresa
+                        var calendarId = await authService
+                            .getCalendarIdFromCompanyCode(enterpriseCode);
+
+                        // Criar o evento no Google Calendar e obter o ID do evento criado
+                        String? eventId = await addEventToCalendar(
                           calendarId: calendarId,
                           title: eventTextField.text,
                           description: descriptionTextField.text,
                           startTimeText: dataInitialField.text,
                           endTimeText: dataEndField.text,
                           reminderMinutes: reminderMinutes,
-                          notification: notification);
-                    } else {
+                          notification: notification,
+                        );
+
+                        if (eventId != null) {
+                          // Criar a tarefa no Firestore, incluindo o ID do evento do Google Calendar
+                          await delegateTaskToUser(
+                            selectedUser!,
+                            eventTextField.text,
+                            descriptionTextField.text,
+                            dateTimeInitial,
+                            dateTimeEnd,
+                            eventId: eventId, // Passar o ID do evento
+                          );
+
+                          // ignore: use_build_context_synchronously
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Evento adicionado com sucesso!'),
+                            ),
+                          );
+                        } else {
+                          throw Exception(
+                              'Erro ao obter o ID do evento do Google Calendar.');
+                        }
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content:
+                                Text('Selecione um usuário para a tarefa.'),
+                          ),
+                        );
+                      }
+                    } catch (e) {
+                      // ignore: use_build_context_synchronously
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Selecione um usuário para a tarefa.'),
+                        SnackBar(
+                          content: Text('Erro: $e'),
                         ),
                       );
                     }
@@ -303,7 +331,9 @@ class _ModalFormState extends State<ModalForm> {
     }
   }
 
-  Future<void> addEventToCalendar({
+  ////////////////////////////////
+  /// Método para adicionar o evento ao google calendar e retorna armazenar o ID do evento
+  Future<String?> addEventToCalendar({
     required String calendarId,
     required String title,
     required String description,
@@ -312,14 +342,10 @@ class _ModalFormState extends State<ModalForm> {
     required int reminderMinutes,
     required String notification,
   }) async {
-    // Obtendo o access token usando o método com o JWT assinado
     final accessToken = await getAccessToken();
-
-    // Configurando as datas de início e fim no formato correto
     DateTime startTime = DateFormat('dd/MM/yyyy HH:mm').parse(startTimeText);
     DateTime endTime = DateFormat('dd/MM/yyyy HH:mm').parse(endTimeText);
 
-    // Formatando o evento para o formato JSON exigido pela API do Google Calendar
     final eventJson = await eventToJson(
       title,
       description,
@@ -329,14 +355,12 @@ class _ModalFormState extends State<ModalForm> {
       notification,
     );
 
-    // Cabeçalhos da requisição com o token de autenticação
     final headers = {
       'Authorization': 'Bearer $accessToken',
       'Content-Type': 'application/json',
     };
 
     try {
-      // Enviando a requisição para criar o evento no Google Calendar
       final response = await http.post(
         Uri.parse(
             'https://www.googleapis.com/calendar/v3/calendars/$calendarId/events'),
@@ -345,23 +369,13 @@ class _ModalFormState extends State<ModalForm> {
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        // ignore: use_build_context_synchronously
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Evento Adicionado com Sucesso!'),
-          ),
-        );
+        final responseData = json.decode(response.body);
+        return responseData['id']; // Retorna o ID do evento
       } else {
-        // ignore: use_build_context_synchronously
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-                "Erro ao adicionar evento: ${response.statusCode} - ${response.body}"),
-          ),
-        );
+        throw Exception("Erro ao criar evento no Google: ${response.body}");
       }
     } catch (e) {
-      //
+      throw Exception("Falha ao adicionar evento ao Google Calendar: $e");
     }
   }
 
@@ -374,8 +388,9 @@ class _ModalFormState extends State<ModalForm> {
     String title,
     String description,
     DateTime startTime,
-    DateTime endTime,
-  ) async {
+    DateTime endTime, {
+    required String eventId,
+  }) async {
     String uid = FirebaseAuth.instance.currentUser!.uid;
 
     // Busca o código da empresa do usuário autenticado na coleção global de usuários
@@ -400,6 +415,8 @@ class _ModalFormState extends State<ModalForm> {
           'created_at': DateTime.now().toIso8601String(),
           'source': 'app',
           'code': enterpriseCode,
+          'google_event_id':
+              eventId, // Adiciona o ID do evento do Google Calendar
         },
       );
 

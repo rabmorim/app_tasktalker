@@ -269,37 +269,89 @@ class AuthService extends ChangeNotifier {
   }
 
   ///////////////////
-  ///  Método para editar um evento no firestore
+// Método para editar um evento no Firestore e no Google Calendar
   Future<void> editEvent({
-    required String eventId,
-    required String companyId,
-    required Map<String, dynamic> updatedData,
+    required String eventId, // ID do evento no Firestore
+    required String companyId, // ID da empresa no Firestore
+    required Map<String, dynamic> updatedData, // Dados atualizados
+    String? googleEventId, // ID do evento no Google Calendar
   }) async {
     try {
+      // Atualizar no Firestore
       await _firestore
           .collection('enterprise')
           .doc(companyId)
           .collection('tasks')
           .doc(eventId)
           .update(updatedData);
+
+      // Atualizar no Google Calendar se o googleEventId estiver disponível
+      if (googleEventId != null) {
+        final String calendarId = await getCalendarIdFromCompanyCode(companyId);
+        final CalendarApi calendarApi = await _getGoogleCalendarApi();
+
+        // Preparar o evento atualizado
+        final Event googleEvent = Event(
+          summary: updatedData['title'],
+          description: updatedData['description'],
+          start: EventDateTime(
+            dateTime: DateTime.parse(updatedData['start_time']),
+            timeZone: 'America/Sao_Paulo',
+          ),
+          end: EventDateTime(
+            dateTime: DateTime.parse(updatedData['end_time']),
+            timeZone: 'America/Sao_Paulo',
+          ),
+        );
+
+        // Atualizar o evento no Google Calendar
+        await calendarApi.events.update(googleEvent, calendarId, googleEventId);
+      }
     } catch (e) {
-      rethrow; // Relança o erro para tratamento externo
+      throw Exception('Erro ao editar o evento: $e');
     }
+  }
+
+///////////////////
+// Método privado para autenticar no Google Calendar usando Service Account
+  Future<CalendarApi> _getGoogleCalendarApi() async {
+    final credentials = await this.credentials();
+    final client = await clientViaServiceAccount(
+      credentials,
+      [CalendarApi.calendarScope],
+    );
+    return CalendarApi(client);
   }
 
   ///////////////////////
   /// Método para Excluir um evento do Firestore
+///////////////////////
+  /// Método para Excluir um evento do Firestore e do Google Calendar
   Future<void> deleteEvent({
     required String eventId,
     required String companyId,
+    String?
+        googleEventId, // Adiciona o ID do evento do Google Calendar como parâmetro opcional
   }) async {
     try {
+      // Excluir do Firestore
       await _firestore
           .collection('enterprise')
           .doc(companyId)
           .collection('tasks')
           .doc(eventId)
           .delete();
+
+      // Se o ID do evento do Google Calendar for fornecido, excluí-lo também
+      if (googleEventId != null) {
+        final calendarId = await getCalendarIdFromCompanyCode(
+            companyId); // Obter o ID do calendário
+        final calendarApi =
+            await _getGoogleCalendarApi(); // Obter o cliente da API Google Calendar
+
+        // Excluir o evento no Google Calendar
+        await calendarApi.events.delete(calendarId, googleEventId);
+      }
     } catch (e) {
       rethrow; // Relança o erro para tratamento externo
     }

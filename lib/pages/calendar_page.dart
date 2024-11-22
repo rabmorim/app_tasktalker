@@ -276,21 +276,40 @@ class _CalendarPageState extends State<CalendarPage> {
 
 ///////////////////////////////
   /// Método para deletar um evento
-  Future<void> _deleteEvent(String eventId, String companyId) async {
+  ///////////////////////
+  /// Método para deletar um evento
+  Future<void> _deleteEvent({
+    required String eventId,
+    required String companyId,
+    String?
+        googleEventId, // Adiciona o ID do evento do Google Calendar como parâmetro
+  }) async {
     final confirm = await showDeleteConfirmationDialog();
 
     if (confirm == true) {
       try {
-        await authService.deleteEvent(eventId: eventId, companyId: companyId);
-        // ignore: use_build_context_synchronously
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Evento excluído com sucesso!")),
+        await authService.deleteEvent(
+          eventId: eventId,
+          companyId: companyId,
+          googleEventId:
+              googleEventId, // Passa o ID do evento do Google Calendar
         );
+
+        // Exibe mensagem de sucesso
+        if (context.mounted) {
+          // ignore: use_build_context_synchronously
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Evento excluído com sucesso!")),
+          );
+        }
       } catch (e) {
-        // ignore: use_build_context_synchronously
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Erro ao excluir evento: $e")),
-        );
+        // Exibe mensagem de erro
+        if (context.mounted) {
+          // ignore: use_build_context_synchronously
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("Erro ao excluir evento: $e")),
+          );
+        }
       }
     }
   }
@@ -332,25 +351,37 @@ class _CalendarPageState extends State<CalendarPage> {
     showEditEventModal(
       context: context,
       event: event,
-      onEventEdited: (updatedEvent) async {
+      onEventEdited: (data) async {
+        final updatedEvent = data['updatedEvent'];
+        final googleEventId = data['googleEventId'];
+
         try {
           await AuthService().editEvent(
             eventId: eventId,
             companyId: companyId,
             updatedData: updatedEvent,
+            googleEventId: googleEventId, // Passe o ID do evento do Google
           );
-          // ignore: use_build_context_synchronously
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Evento atualizado com sucesso!")),
-          );
+
+          // Exibir uma mensagem de sucesso
+          if (context.mounted) {
+            // ignore: use_build_context_synchronously
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text("Evento atualizado com sucesso!")),
+            );
+          }
+
           setState(() {
-            // Atualizar a exibição dos eventos
+            // Atualizar a exibição dos eventos (recarregar a lista ou atualizar localmente)
           });
         } catch (e) {
-          // ignore: use_build_context_synchronously
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("Erro ao atualizar evento: $e")),
-          );
+          // Exibir uma mensagem de erro
+          if (context.mounted) {
+            // ignore: use_build_context_synchronously
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text("Erro ao atualizar evento: $e")),
+            );
+          }
         }
       },
     );
@@ -603,14 +634,17 @@ class _CalendarPageState extends State<CalendarPage> {
                                                   event['uid'], event['code']),
                                             ),
                                             PopupMenuItem<String>(
-                                              value: 'Excluir',
-                                              child: const ListTile(
-                                                leading: Icon(Icons.delete),
-                                                title: Text('Excluir'),
-                                              ),
-                                              onTap: () => _deleteEvent(
-                                                  event['uid'], event['code']),
-                                            ),
+                                                value: 'Excluir',
+                                                child: const ListTile(
+                                                  leading: Icon(Icons.delete),
+                                                  title: Text('Excluir'),
+                                                ),
+                                                onTap: () => _deleteEvent(
+                                                      eventId: event['uid'],
+                                                      companyId: event['code'],
+                                                      googleEventId: event[
+                                                          'google_event_id'], // Certifique-se de que esse campo está presente nos dados do evento
+                                                    )),
                                           ],
                                         );
                                       } else {

@@ -19,7 +19,6 @@ Future<void> showEditEventModal({
   descriptionTextField.text = event['description'] ?? '';
   dataInitialField.text = event['start_time'] ?? '';
   dataEndField.text = event['end_time'] ?? '';
-  
 
   await showModalBottomSheet(
     context: context,
@@ -113,13 +112,17 @@ Future<void> showEditEventModal({
                   };
 
                   Navigator.of(context).pop();
-                  onEventEdited(updatedEvent);
+                  onEventEdited({
+                    'updatedEvent': updatedEvent,
+                    'googleEventId': event[
+                        'google_event_id'], // Adicione o ID do evento do Google Calendar
+                    'calendarId': event[
+                        'calendar_id'], // Adicione o ID do calendário do Google
+                  });
                 },
                 child: const Text(
                   'Salvar Alterações',
-                  style: TextStyle(
-                    color: Colors.white
-                  ),
+                  style: TextStyle(color: Colors.white),
                 ),
               ),
               const SizedBox(height: 20),
