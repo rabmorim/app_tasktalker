@@ -568,6 +568,7 @@ class _CalendarPageState extends State<CalendarPage> {
 
                         if (event['source'] == 'app') {
                           var userId = event['assigned_to'];
+                          var delegateUid = event['delegate_by'];
                           final startTime = event['start_time'];
                           final endTime = event['end_time'];
 
@@ -613,7 +614,7 @@ class _CalendarPageState extends State<CalendarPage> {
                                     onLongPressStart:
                                         (LongPressStartDetails details) {
                                       if (userId ==
-                                          firebaseAuth.currentUser!.uid) {
+                                          firebaseAuth.currentUser!.uid || firebaseAuth.currentUser!.uid == delegateUid ) {
                                         // Verificar permissão
                                         showMenu(
                                           context: context,

@@ -408,6 +408,7 @@ class _ModalFormState extends State<ModalForm> {
           .add(
         {
           'assigned_to': userId,
+          'delegate_by': uid,
           'title': title,
           'description': description,
           'start_time': startTime.toIso8601String(),

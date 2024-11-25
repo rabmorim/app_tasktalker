@@ -12,6 +12,7 @@ import 'package:provider/provider.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  
 
   // Inicialize o FlutterLocalNotificationsPlugin para notificações locais
   await TaskNotificationManager().initialize();

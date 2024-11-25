@@ -78,8 +78,9 @@ class _MenuDrawerState extends State<MenuDrawer> {
         style: const TextStyle(color: Colors.white54),
       );
     }
-     ///////////////////////////////////////
-     ///Método para realizar o logout.
+
+    ///////////////////////////////////////
+    ///Método para realizar o logout.
     void signOut() {
       // Obter o serviço de autenticação
       final authService = Provider.of<AuthService>(context, listen: false);
@@ -120,7 +121,7 @@ class _MenuDrawerState extends State<MenuDrawer> {
 
           // Exibir apenas o botão de login se o usuário não estiver logado
           if (!isLoggedInWithGoogle) ...[
-            // Ícone de Logar com o Google 
+            // Ícone de Logar com o Google
             ListTile(
               title: mostrarTitulo('Conectar ao Google'),
               subtitle: mostrarSubTitulo(
@@ -183,11 +184,10 @@ class _MenuDrawerState extends State<MenuDrawer> {
                 );
               },
             ),
-            // Ícone Calendário 
+            // Ícone Calendário
             ListTile(
               title: mostrarTitulo('Calendário'),
-              subtitle: mostrarSubTitulo(
-                  'Veja seus Compromissos'),
+              subtitle: mostrarSubTitulo('Veja seus Compromissos'),
               leading: const FaIcon(
                 FontAwesomeIcons.calendarDays,
                 size: 24,
@@ -241,8 +241,10 @@ class _MenuDrawerState extends State<MenuDrawer> {
               ),
               onTap: () {
                 signOut();
-                MaterialPageRoute(
-                  builder: (context) => const AuthGate(),
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(
+                    builder: (context) => const AuthGate(),
+                  ),
                 );
               },
             ),
