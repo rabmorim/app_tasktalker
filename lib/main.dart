@@ -1,5 +1,10 @@
-import 'dart:async';
+/*
+  Classe Main
+  Feito por: Rodrigo abreu Amorim
+  Ultima modificação: 25/11/2024
+ */
 
+import 'dart:async';
 import 'package:app_mensagem/firebase_options.dart';
 import 'package:app_mensagem/pages/recursos/estilo.dart';
 import 'package:app_mensagem/pages/recursos/task_notification_manager.dart';

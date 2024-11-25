@@ -1,3 +1,8 @@
+/*
+  Página de calendário
+  Feito por: Rodrigo abreu Amorim
+  Ultima modificação: 25/11/2024
+ */
 import 'dart:convert';
 import 'package:app_mensagem/pages/recursos/barra_superior.dart';
 import 'package:app_mensagem/pages/recursos/drawer.dart';

@@ -1,3 +1,9 @@
+/*
+  Página Home
+  Feito por: Rodrigo abreu Amorim
+  Ultima modificação: 25/11/2024
+ */
+
 import 'package:app_mensagem/pages/recursos/barra_superior.dart';
 import 'package:app_mensagem/pages/recursos/drawer.dart';
 import 'package:flutter/material.dart';

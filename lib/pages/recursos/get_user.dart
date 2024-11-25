@@ -1,3 +1,9 @@
+/*
+  Classe para pegar o username do usuário
+  Feito por: Rodrigo abreu Amorim
+  Ultima modificação: 25/11/2024
+ */
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class GetUser {

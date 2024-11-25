@@ -1,3 +1,9 @@
+/*
+  Página de registro de usuário
+  Feito por: Rodrigo abreu Amorim
+  Ultima modificação: 25/11/2024
+ */
+
 import "package:app_mensagem/pages/recursos/button.dart";
 import "package:app_mensagem/pages/recursos/logo.dart";
 import "package:app_mensagem/pages/recursos/text_field.dart";

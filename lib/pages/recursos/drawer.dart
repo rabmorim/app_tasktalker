@@ -1,3 +1,10 @@
+/*
+  Modelo Do Drawer da aplicação
+  Feito por: Rodrigo abreu Amorim
+  Ultima modificação: 25/11/2024
+ */
+
+
 import 'package:app_mensagem/pages/calendar_page.dart';
 import 'package:app_mensagem/pages/google_conection.dart';
 import 'package:app_mensagem/pages/home_page.dart';
@@ -190,6 +197,27 @@ class _MenuDrawerState extends State<MenuDrawer> {
               subtitle: mostrarSubTitulo('Veja seus Compromissos'),
               leading: const FaIcon(
                 FontAwesomeIcons.calendarDays,
+                size: 24,
+              ),
+              trailing: const Icon(
+                Icons.keyboard_arrow_right,
+                size: 20,
+              ),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const CalendarPage(),
+                  ),
+                );
+              },
+            ),
+            //Icone dos Foruns
+            ListTile(
+              title: mostrarTitulo('Foruns'),
+              subtitle: mostrarSubTitulo('Veja os Foruns em aberto'),
+              leading: const FaIcon(
+                FontAwesomeIcons.commentDots,
                 size: 24,
               ),
               trailing: const Icon(

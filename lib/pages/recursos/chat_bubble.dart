@@ -1,3 +1,9 @@
+/*
+  Modelo Do balão do chat
+  Feito por: Rodrigo abreu Amorim
+  Ultima modificação: 25/11/2024
+ */
+
 import 'package:flutter/material.dart';
 
 class ChatBubble extends StatelessWidget {

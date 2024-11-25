@@ -1,3 +1,9 @@
+/*
+  Página das tarefas do google calendar
+  Feito por: Rodrigo abreu Amorim
+  Ultima modificação: 25/11/2024
+ */
+
 import 'dart:convert';
 import 'package:app_mensagem/services/auth/auth_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';

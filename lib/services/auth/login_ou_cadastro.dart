@@ -1,3 +1,8 @@
+/*
+  Controle de login e cadastro
+  Feito por: Rodrigo abreu Amorim
+  Ultima modificação: 25/11/2024
+ */
 import 'package:app_mensagem/pages/login_page.dart';
 import 'package:app_mensagem/pages/register_page.dart';
 import 'package:flutter/material.dart';

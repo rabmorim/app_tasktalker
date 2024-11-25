@@ -1,3 +1,8 @@
+/*
+  Auth-Gate
+  Feito por: Rodrigo abreu Amorim
+  Ultima modificação: 25/11/2024
+ */
 import 'package:app_mensagem/pages/home_page.dart';
 import 'package:app_mensagem/services/auth/login_ou_cadastro.dart';
 import 'package:firebase_auth/firebase_auth.dart';

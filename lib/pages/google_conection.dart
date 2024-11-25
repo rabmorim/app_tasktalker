@@ -1,3 +1,9 @@
+/*
+  Página para se conectar com o google
+  Feito por: Rodrigo abreu Amorim
+  Ultima modificação: 25/11/2024
+ */
+
 import 'package:app_mensagem/pages/recursos/barra_superior.dart';
 import 'package:app_mensagem/services/auth/auth_service.dart';
 import 'package:flutter/material.dart';

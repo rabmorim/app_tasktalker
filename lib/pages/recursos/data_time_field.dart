@@ -1,3 +1,9 @@
+/*
+  Campo de data da aplicação
+  Feito por: Rodrigo abreu Amorim
+  Ultima modificação: 25/11/2024
+ */
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 

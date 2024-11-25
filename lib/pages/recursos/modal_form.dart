@@ -1,3 +1,10 @@
+/*
+  Classe do formulário modal
+  Feito por: Rodrigo abreu Amorim
+  Ultima modificação: 25/11/2024
+ */
+
+
 import 'dart:convert';
 import 'package:app_mensagem/services/auth/auth_service.dart';
 import 'package:dart_jsonwebtoken/dart_jsonwebtoken.dart';
