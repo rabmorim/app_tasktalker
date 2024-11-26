@@ -21,7 +21,7 @@ class ForumService {
   Future<void> createForum(String name, String message) async {
     try {
       String uid = _auth.currentUser!.uid;
-      var username = getUserName.getUserName(uid);
+      var username = await getUserName.getUserName(uid);
 
       await _db.collection('forums').add({
         'uid': uid,
@@ -106,7 +106,7 @@ class ForumService {
   Future<void> addReply(String forumId, String message) async {
     try {
       String uid = _auth.currentUser!.uid;
-      var username = getUserName.getUserName(uid);
+      var username =  await getUserName.getUserName(uid);
 
       await _db.collection('forums').doc(forumId).collection('replies').add({
         'uid': uid,

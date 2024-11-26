@@ -164,7 +164,6 @@ class _ChatPageState extends State<ChatPage> {
   ////////////////////////////////
   /// Método para editar a mensagem
   void _editMessage(String messageId, String currentMessage) {
-    // Aqui você pode adicionar um TextField para atualizar a mensagem.
     // Exemplo de implementação básica:
     _messageController.text =
         currentMessage; // Preenche com o conteúdo atual para editar

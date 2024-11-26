@@ -6,6 +6,7 @@
 
 
 import 'package:app_mensagem/pages/calendar_page.dart';
+import 'package:app_mensagem/pages/forum_page.dart';
 import 'package:app_mensagem/pages/google_conection.dart';
 import 'package:app_mensagem/pages/home_page.dart';
 import 'package:app_mensagem/pages/user_task_list.dart';
@@ -217,7 +218,7 @@ class _MenuDrawerState extends State<MenuDrawer> {
               title: mostrarTitulo('Foruns'),
               subtitle: mostrarSubTitulo('Veja os Foruns em aberto'),
               leading: const FaIcon(
-                FontAwesomeIcons.commentDots,
+                FontAwesomeIcons.solidComments,
                 size: 24,
               ),
               trailing: const Icon(
@@ -228,7 +229,7 @@ class _MenuDrawerState extends State<MenuDrawer> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const CalendarPage(),
+                    builder: (context) => const ForumPage(),
                   ),
                 );
               },
