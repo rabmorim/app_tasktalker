@@ -1,7 +1,7 @@
 /*
   Forum Service
   Feito por: Rodrigo abreu Amorim
-  Ultima modificação: 25/11/2024
+  Ultima modificação: 27/11/2024
  */
 
 import 'package:app_mensagem/model/forum.dart';
@@ -23,7 +23,13 @@ class ForumService {
       String uid = _auth.currentUser!.uid;
       var username = await getUserName.getUserName(uid);
 
-      await _db.collection('forums').add({
+      String enterpriseCode = await getEnterpriseCode(uid);
+
+      await _db
+          .collection('enterprise')
+          .doc(enterpriseCode)
+          .collection('forums')
+          .add({
         'uid': uid,
         'name': name,
         'username': username,
@@ -50,8 +56,13 @@ class ForumService {
   /////////////////
   /// Método para buscar todos os forums do firebase
   Future<List<Post>> fetchForums() async {
+    String uid = _auth.currentUser!.uid;
+    String enterpriseCode = await getEnterpriseCode(uid);
+
     try {
       QuerySnapshot snapshot = await _db
+          .collection('enterprise')
+          .doc(enterpriseCode)
           .collection('forums')
           .orderBy('timestamp', descending: true)
           .get();
@@ -67,8 +78,13 @@ class ForumService {
   Future<void> likeForum(String forumId) async {
     try {
       String uid = _auth.currentUser!.uid;
+      String enterpriseCode = await getEnterpriseCode(uid);
 
-      DocumentReference forumRef = _db.collection('forums').doc(forumId);
+      DocumentReference forumRef = _db
+          .collection('enterprise')
+          .doc(enterpriseCode)
+          .collection('forums')
+          .doc(forumId);
 
       DocumentSnapshot doc = await forumRef.get();
       List likedBy = doc['likedBy'];
@@ -106,7 +122,7 @@ class ForumService {
   Future<void> addReply(String forumId, String message) async {
     try {
       String uid = _auth.currentUser!.uid;
-      var username =  await getUserName.getUserName(uid);
+      var username = await getUserName.getUserName(uid);
 
       await _db.collection('forums').doc(forumId).collection('replies').add({
         'uid': uid,
@@ -117,5 +133,16 @@ class ForumService {
     } catch (e) {
       throw Exception('Erro ao responder: $e');
     }
+  }
+
+  ///////////////////////
+  /// Método para buscar a empresa do usuário cadastrado
+  Future<String> getEnterpriseCode(String uid) async {
+    DocumentSnapshot userDoc =
+        await FirebaseFirestore.instance.collection('users').doc(uid).get();
+
+    String enterpriseCode = userDoc['code'];
+
+    return enterpriseCode;
   }
 }

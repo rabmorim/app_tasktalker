@@ -1,7 +1,7 @@
 /*
   Classe Main
   Feito por: Rodrigo abreu Amorim
-  Ultima modificação: 25/11/2024
+  Ultima modificação: 27/11/2024
  */
 
 import 'dart:async';
@@ -10,6 +10,7 @@ import 'package:app_mensagem/pages/recursos/estilo.dart';
 import 'package:app_mensagem/pages/recursos/task_notification_manager.dart';
 import 'package:app_mensagem/services/auth/auth_gate.dart';
 import 'package:app_mensagem/services/auth/auth_service.dart';
+import 'package:app_mensagem/services/forum_provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -17,7 +18,6 @@ import 'package:provider/provider.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  
 
   // Inicialize o FlutterLocalNotificationsPlugin para notificações locais
   await TaskNotificationManager().initialize();
@@ -25,8 +25,13 @@ void main() async {
   // Inicia o verificador de tarefas periodicamente
   startTaskCheck();
 
-  runApp(ChangeNotifierProvider(
-    create: (context) => AuthService(),
+  runApp(MultiProvider(
+    providers: [
+      ChangeNotifierProvider(
+        create: (context) => AuthService(),
+      ),
+      ChangeNotifierProvider(create: (_) => ForumProvider())
+    ],
     child: const MyApp(),
   ));
 }

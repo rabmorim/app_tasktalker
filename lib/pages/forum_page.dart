@@ -1,25 +1,19 @@
 /*
   Página do Fórum
-  Feito por: Rodrigo abreu Amorim
-  Última modificação: 26/11/2024
+  Feito por: Rodrigo Abreu Amorim
+  Última modificação: 27/11/2024
  */
 
 import 'package:app_mensagem/model/forum.dart';
 import 'package:app_mensagem/pages/recursos/barra_superior.dart';
 import 'package:app_mensagem/pages/recursos/drawer.dart';
 import 'package:app_mensagem/pages/recursos/modal_forum.dart';
-import 'package:app_mensagem/services/auth/forum_service.dart';
+import 'package:app_mensagem/services/forum_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
-class ForumPage extends StatefulWidget {
+class ForumPage extends StatelessWidget {
   const ForumPage({super.key});
-
-  @override
-  State<ForumPage> createState() => _ForumPageState();
-}
-
-class _ForumPageState extends State<ForumPage> {
-  final ForumService _forumService = ForumService();
 
   // Método para limitar a mensagem do fórum
   String getPreview(String message) {
@@ -31,6 +25,8 @@ class _ForumPageState extends State<ForumPage> {
 
   @override
   Widget build(BuildContext context) {
+    final forumProvider = Provider.of<ForumProvider>(context, listen: false);
+
     return Scaffold(
       appBar: const BarraSuperior(
         titulo: "Fórum",
@@ -40,7 +36,7 @@ class _ForumPageState extends State<ForumPage> {
       body: Padding(
         padding: const EdgeInsets.all(18.0),
         child: FutureBuilder<List<Post>>(
-          future: _forumService.fetchForums(),
+          future: forumProvider.fetchForums(), // Chama o método do provider
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(
@@ -66,6 +62,9 @@ class _ForumPageState extends State<ForumPage> {
               itemCount: forums.length,
               itemBuilder: (context, index) {
                 final forum = forums[index];
+                final isLiked =
+                    forum.likedBy.contains(forumProvider.currentUserId);
+
                 return Container(
                   margin: const EdgeInsets.only(bottom: 12.0),
                   decoration: BoxDecoration(
@@ -98,7 +97,7 @@ class _ForumPageState extends State<ForumPage> {
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.grey,
-                                letterSpacing: 2
+                                letterSpacing: 2,
                               ),
                             ),
                           ],
@@ -124,6 +123,33 @@ class _ForumPageState extends State<ForumPage> {
                             color: Colors.black,
                           ),
                         ),
+                        const SizedBox(height: 12.0),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            Text(
+                              '${forum.likeCount}', // Contador de likes
+                              style: const TextStyle(
+                                  color: Colors.black, fontSize: 14),
+                            ),
+                            const SizedBox(width: 4),
+                            IconButton(
+                              icon: Icon(
+                                isLiked
+                                    ? Icons.favorite
+                                    : Icons.favorite_border,
+                                color: isLiked ? Colors.red : Colors.grey,
+                              ),
+                              onPressed: () async {
+                                if (isLiked) {
+                                  await forumProvider.unlikeForum(forum.id);
+                                } else {
+                                  await forumProvider.likeForum(forum.id);
+                                }
+                              },
+                            ),
+                          ],
+                        ),
                       ],
                     ),
                     onTap: () {
@@ -142,8 +168,7 @@ class _ForumPageState extends State<ForumPage> {
             context: context,
             onForumCreated: (forumData) async {
               try {
-                // Passar os dados individualmente para o método
-                await ForumService().createForum(
+                await forumProvider.createForum(
                   forumData['name'],
                   forumData['message'],
                 );
@@ -153,9 +178,6 @@ class _ForumPageState extends State<ForumPage> {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text("Fórum criado com sucesso!")),
                   );
-                  setState(() {
-                    // Atualizar a interface se necessário
-                  });
                 }
               } catch (e) {
                 // Mostrar erro
