@@ -1,14 +1,16 @@
 /*
   Página do Fórum
   Feito por: Rodrigo Abreu Amorim
-  Última modificação: 27/11/2024
+  Última modificação: 28/11/2024
  */
 
 import 'package:app_mensagem/model/forum.dart';
+import 'package:app_mensagem/pages/forum_reply_page.dart';
 import 'package:app_mensagem/pages/recursos/barra_superior.dart';
 import 'package:app_mensagem/pages/recursos/drawer.dart';
 import 'package:app_mensagem/pages/recursos/modal_forum.dart';
 import 'package:app_mensagem/services/forum_provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -25,8 +27,11 @@ class ForumPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final forumProvider = Provider.of<ForumProvider>(context, listen: false);
-
+    final forumProvider = Provider.of<ForumProvider>(context, listen: true);
+    forumProvider.fetchForums();
+    List<Post> foruns = forumProvider.getForums;
+    final auth = FirebaseAuth.instance;
+    String uid = auth.currentUser!.uid;
     return Scaffold(
       appBar: const BarraSuperior(
         titulo: "Fórum",
@@ -34,134 +39,117 @@ class ForumPage extends StatelessWidget {
       ),
       drawer: const MenuDrawer(),
       body: Padding(
-        padding: const EdgeInsets.all(18.0),
-        child: FutureBuilder<List<Post>>(
-          future: forumProvider.fetchForums(), // Chama o método do provider
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(
-                child: CircularProgressIndicator(
-                  color: Colors.white54,
+          padding: const EdgeInsets.all(18.0),
+          child: ListView.builder(
+            itemCount: foruns.length,
+            itemBuilder: (context, index) {
+              final forum = foruns[index];
+              final isLiked =
+                  forum.likedBy.contains(forumProvider.currentUserId);
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12.0),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8.0),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.withOpacity(0.6),
+                      blurRadius: 6.0,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
                 ),
-              );
-            }
-            if (snapshot.hasError) {
-              return Center(
-                child: Text("Erro ao carregar fóruns: ${snapshot.error}"),
-              );
-            }
-            if (!snapshot.hasData || snapshot.data!.isEmpty) {
-              return const Center(
-                child: Text("Nenhum fórum encontrado."),
-              );
-            }
-
-            final forums = snapshot.data!;
-
-            return ListView.builder(
-              itemCount: forums.length,
-              itemBuilder: (context, index) {
-                final forum = forums[index];
-                final isLiked =
-                    forum.likedBy.contains(forumProvider.currentUserId);
-
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 12.0),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(8.0),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.grey.withOpacity(0.6),
-                        blurRadius: 6.0,
-                        offset: const Offset(0, 3),
+                child: ListTile(
+                  title: Column(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 4.0),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.person,
+                            size: 18,
+                            color: Colors.grey,
+                          ),
+                          const SizedBox(width: 4.0),
+                          Text(
+                            forum.username,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey,
+                              letterSpacing: 2,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                  child: ListTile(
-                    title: Column(
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      children: [
-                        const SizedBox(height: 4.0),
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.person,
-                              size: 18,
-                              color: Colors.grey,
-                            ),
-                            const SizedBox(width: 4.0),
-                            Text(
-                              forum.username,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.grey,
-                                letterSpacing: 2,
-                              ),
-                            ),
-                          ],
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      const SizedBox(height: 4.0),
+                      Text(
+                        forum.name,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          color: Colors.black,
                         ),
-                      ],
-                    ),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        const SizedBox(height: 4.0),
-                        Text(
-                          forum.name,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            color: Colors.black,
-                          ),
+                      ),
+                      const SizedBox(height: 8.0),
+                      Text(
+                        getPreview(forum.message),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.black,
                         ),
-                        const SizedBox(height: 8.0),
-                        Text(
-                          getPreview(forum.message),
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Colors.black,
-                          ),
-                        ),
-                        const SizedBox(height: 12.0),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            Text(
-                              '${forum.likeCount}', // Contador de likes
-                              style: const TextStyle(
-                                  color: Colors.black, fontSize: 14),
-                            ),
-                            const SizedBox(width: 4),
-                            IconButton(
-                              icon: Icon(
+                      ),
+                      const SizedBox(height: 12.0),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          const SizedBox(width: 4),
+                          IconButton(
+                            icon: Badge.count(
+                              backgroundColor: Colors.grey,
+                              count: forum.likeCount,
+                              child: Icon(
                                 isLiked
                                     ? Icons.favorite
                                     : Icons.favorite_border,
                                 color: isLiked ? Colors.red : Colors.grey,
                               ),
-                              onPressed: () async {
-                                if (isLiked) {
-                                  await forumProvider.unlikeForum(forum.id);
-                                } else {
-                                  await forumProvider.likeForum(forum.id);
-                                }
-                              },
                             ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    onTap: () {
-                      // Redirecionar para a página de detalhes do fórum
-                    },
+                            onPressed: () async {
+                              if (isLiked) {
+                                await forumProvider.unlikeForum(forum.id);
+                              } else {
+                                await forumProvider.likeForum(forum.id);
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
-                );
-              },
-            );
-          },
-        ),
-      ),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ForumReplyPage(
+                          forumTitle: forum.name, 
+                          forumMessage: forum.message, 
+                          username: forum.username, 
+                          forumId: forum.id, 
+                          currentUserId: uid)
+                      ),
+                    );
+                  },
+                ),
+              );
+            },
+          )),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           showCreateForumModal(

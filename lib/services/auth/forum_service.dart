@@ -101,6 +101,29 @@ class ForumService {
   }
 
   /////////////////////
+  /// Método para dar unliked
+  Future<void> unlikeForum(String forumId) async {
+    String uid = _auth.currentUser!.uid;
+    String enterpriseCode = await getEnterpriseCode(uid);
+
+    DocumentReference forumRef = _db
+        .collection('enterprise')
+        .doc(enterpriseCode)
+        .collection('forums')
+        .doc(forumId);
+
+    DocumentSnapshot doc = await forumRef.get();
+    List likedBy = doc['likedBy'];
+
+    if (likedBy.contains(uid)) {
+      await forumRef.update({
+        'likeCount': FieldValue.increment(-1),
+        'likedBy': FieldValue.arrayRemove([uid])
+      });
+    }
+  }
+
+  /////////////////////
   /// Método para buscar as respostas
   Future<List<Object?>> fetchReplies(String forumId) async {
     try {

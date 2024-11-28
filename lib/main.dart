@@ -30,8 +30,8 @@ void main() async {
       ChangeNotifierProvider(
         create: (context) => AuthService(),
       ),
-      ChangeNotifierProvider(create: (_) => ForumProvider())
-    ],
+      ChangeNotifierProvider(create: (context) => ForumProvider())
+    ], 
     child: const MyApp(),
   ));
 }
