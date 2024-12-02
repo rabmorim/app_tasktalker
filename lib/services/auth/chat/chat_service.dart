@@ -1,3 +1,9 @@
+/*
+  Chat service
+  Feito por: Rodrigo abreu Amorim
+  Ultima modificação: 02/12/2024
+ */
+
 import 'package:app_mensagem/model/message.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';

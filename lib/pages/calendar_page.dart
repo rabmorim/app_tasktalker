@@ -280,9 +280,7 @@ class _CalendarPageState extends State<CalendarPage> {
   }
 
 ///////////////////////////////
-  /// Método para deletar um evento
-  ///////////////////////
-  /// Método para deletar um evento
+/// Método para deletar um evento
   Future<void> _deleteEvent({
     required String eventId,
     required String companyId,

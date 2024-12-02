@@ -182,7 +182,10 @@ class _ChatPageState extends State<ChatPage> {
                 "Cancelar",
                 style: TextStyle(color: Colors.white54),
               ),
-              onPressed: () => Navigator.pop(context),
+              onPressed: () {
+                  Navigator.pop(context);
+                  _messageController.clear();
+              } 
             ),
             TextButton(
               child: const Text(
@@ -193,6 +196,7 @@ class _ChatPageState extends State<ChatPage> {
                 _chatService.updateMessage(
                     widget.receiverUserID, messageId, _messageController.text);
                 Navigator.pop(context);
+                _messageController.clear();
               },
             ),
           ],
