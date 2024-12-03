@@ -1,7 +1,7 @@
 /*
   Página do Fórum
   Feito por: Rodrigo Abreu Amorim
-  Última modificação: 28/11/2024
+  Última modificação: 03/12/2024
  */
 
 import 'package:app_mensagem/model/forum.dart';
@@ -17,7 +17,8 @@ import 'package:provider/provider.dart';
 class ForumPage extends StatelessWidget {
   const ForumPage({super.key});
 
-  // Método para limitar a mensagem do fórum
+  /////////////////////////////
+  /// Método para limitar a mensagem do fórum
   String getPreview(String message) {
     const int maxLength = 50;
     return message.length > maxLength
@@ -32,6 +33,7 @@ class ForumPage extends StatelessWidget {
     List<Post> foruns = forumProvider.getForums;
     final auth = FirebaseAuth.instance;
     String uid = auth.currentUser!.uid;
+
     return Scaffold(
       appBar: const BarraSuperior(
         titulo: "Fórum",
@@ -39,15 +41,57 @@ class ForumPage extends StatelessWidget {
       ),
       drawer: const MenuDrawer(),
       body: Padding(
-          padding: const EdgeInsets.all(18.0),
-          child: ListView.builder(
-            itemCount: foruns.length,
-            itemBuilder: (context, index) {
-              final forum = foruns[index];
-              final isLiked =
-                  forum.likedBy.contains(forumProvider.currentUserId);
+        padding: const EdgeInsets.all(18.0),
+        child: ListView.builder(
+          itemCount: foruns.length,
+          itemBuilder: (context, index) {
+            final forum = foruns[index];
+            final isLiked = forum.likedBy.contains(forumProvider.currentUserId);
+            final isCurrentUser = forum.uid == uid;
 
-              return Container(
+            return GestureDetector(
+              onLongPressStart: isCurrentUser
+                  ? (details) {
+                      showMenu(
+                        context: context,
+                        position: RelativeRect.fromLTRB(
+                          details.globalPosition.dx,
+                          details.globalPosition.dy,
+                          details.globalPosition.dx,
+                          details.globalPosition.dy,
+                        ),
+                        items: [
+                          PopupMenuItem<String>(
+                            value: 'Editar',
+                            child: const ListTile(
+                              leading: Icon(Icons.edit),
+                              title: Text('Editar'),
+                            ),
+                            onTap: () => _editForum(
+                              context,
+                              forum.id,
+                              forum.name,
+                              forum.message,
+                              forumProvider,
+                            ),
+                          ),
+                          PopupMenuItem<String>(
+                            value: 'Excluir',
+                            child: const ListTile(
+                              leading: Icon(Icons.delete),
+                              title: Text('Excluir'),
+                            ),
+                            onTap: () => _deleteForum(
+                              context,
+                              forum.id,
+                              forumProvider,
+                            ),
+                          ),
+                        ],
+                      );
+                    }
+                  : null,
+              child: Container(
                 margin: const EdgeInsets.only(bottom: 12.0),
                 decoration: BoxDecoration(
                   color: Colors.white,
@@ -138,18 +182,21 @@ class ForumPage extends StatelessWidget {
                       context,
                       MaterialPageRoute(
                         builder: (context) => ForumReplyPage(
-                          forumTitle: forum.name, 
-                          forumMessage: forum.message, 
-                          username: forum.username, 
-                          forumId: forum.id, 
-                          currentUserId: uid)
+                          forumTitle: forum.name,
+                          forumMessage: forum.message,
+                          username: forum.username,
+                          forumId: forum.id,
+                          currentUserId: uid,
+                        ),
                       ),
                     );
                   },
                 ),
-              );
-            },
-          )),
+              ),
+            );
+          },
+        ),
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           showCreateForumModal(
@@ -181,6 +228,89 @@ class ForumPage extends StatelessWidget {
         backgroundColor: Colors.white,
         child: const Icon(Icons.add, color: Colors.black),
       ),
+    );
+  }
+
+  /////////////////////////////
+  /// Método para Editar um fórum
+  void _editForum(BuildContext context, String forumId, String currentName,
+      String currentMessage, ForumProvider forumProvider) {
+    TextEditingController nameController =
+        TextEditingController(text: currentName);
+    TextEditingController messageController =
+        TextEditingController(text: currentMessage);
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text("Editar Fórum"),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameController,
+                  decoration: const InputDecoration(labelText: "Nome"),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: messageController,
+                  decoration: const InputDecoration(labelText: "Mensagem"),
+                  maxLines: null, // Permite linhas ilimitadas
+                  minLines: 5, // Define o mínimo de linhas visíveis
+                  keyboardType: TextInputType.multiline,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () async {
+                await forumProvider.updateForum(
+                  forumId,
+                  nameController.text,
+                  messageController.text,
+                );
+                // ignore: use_build_context_synchronously
+                Navigator.pop(context);
+              },
+              child: const Text(
+                "Salvar",
+                style: TextStyle(color: Colors.white54),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  /////////////////////////////
+  /// Método para Deletar um forum
+  void _deleteForum(
+      BuildContext context, String forumId, ForumProvider forumProvider) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text("Excluir Fórum"),
+          content: const Text("Tem certeza que deseja excluir este fórum?"),
+          actions: [
+            TextButton(
+              onPressed: () async {
+                await forumProvider.deleteForum(forumId);
+                // ignore: use_build_context_synchronously
+                Navigator.pop(context);
+              },
+              child: const Text(
+                "Excluir",
+                style: TextStyle(color: Colors.white54),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

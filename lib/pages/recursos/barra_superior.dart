@@ -1,25 +1,28 @@
 /*
   Barra Superior da aplicação
   Feito por: Rodrigo abreu Amorim
-  Ultima modificação: 25/11/2024
+  Ultima modificação: 03/12/2024
  */
 
-import 'package:app_mensagem/services/auth/auth_gate.dart';
-import 'package:app_mensagem/services/auth/auth_service.dart';
+import 'package:app_mensagem/pages/forum_page.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:table_calendar/table_calendar.dart';
+import 'package:app_mensagem/services/auth/auth_gate.dart';
+import 'package:app_mensagem/services/auth/auth_service.dart';
 
 class BarraSuperior extends StatefulWidget implements PreferredSizeWidget {
   final String titulo;
   final bool isCalendarPage;
-  final void Function(CalendarFormat)? onFormatChanged; // Função de callback para mudança de visualização
+  final bool? isForumPage;
+  final void Function(CalendarFormat)? onFormatChanged;
 
   const BarraSuperior({
     super.key,
     required this.titulo,
     required this.isCalendarPage,
-    this.onFormatChanged, // Adiciona a função de callback
+    this.onFormatChanged,
+    this.isForumPage,
   });
 
   @override
@@ -33,6 +36,27 @@ class _BarraSuperiorState extends State<BarraSuperior> {
   @override
   Widget build(BuildContext context) {
     return AppBar(
+      // Adapta o botão à esquerda com base no tipo de página
+      leading: widget.isForumPage == true
+          ? IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.white54),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ForumPage(),
+                  ),
+                );
+              },
+            )
+          : Builder(
+              builder: (BuildContext context) {
+                return IconButton(
+                  icon: const Icon(Icons.menu, color: Colors.white54),
+                  onPressed: () => Scaffold.of(context).openDrawer(),
+                );
+              },
+            ),
       title: Center(
         child: Text(
           widget.titulo,
@@ -48,7 +72,6 @@ class _BarraSuperiorState extends State<BarraSuperior> {
               IconButton(
                 icon: const Icon(Icons.more_vert, color: Colors.white54),
                 onPressed: () {
-                  // Mostra o ModalBottomSheet para escolher a visualização
                   showModalBottomSheet(
                     context: context,
                     builder: (context) {
@@ -60,7 +83,8 @@ class _BarraSuperiorState extends State<BarraSuperior> {
                             title: const Text('Mensal'),
                             onTap: () {
                               Navigator.pop(context);
-                              widget.onFormatChanged?.call(CalendarFormat.month);
+                              widget.onFormatChanged
+                                  ?.call(CalendarFormat.month);
                             },
                           ),
                           ListTile(
@@ -76,7 +100,8 @@ class _BarraSuperiorState extends State<BarraSuperior> {
                             title: const Text('Duas Semanas'),
                             onTap: () {
                               Navigator.pop(context);
-                              widget.onFormatChanged?.call(CalendarFormat.twoWeeks);
+                              widget.onFormatChanged
+                                  ?.call(CalendarFormat.twoWeeks);
                             },
                           ),
                         ],
@@ -102,12 +127,13 @@ class _BarraSuperiorState extends State<BarraSuperior> {
                 ),
               ),
             ],
-      automaticallyImplyLeading: true,
+      automaticallyImplyLeading: false,
       backgroundColor: const Color(0xff212121),
     );
   }
+
   ////////////////////////////////
-  ///Método para fazer logout
+  /// Método para fazer logout
   void signOut() {
     final authService = Provider.of<AuthService>(context, listen: false);
     authService.signOut();

@@ -61,7 +61,10 @@ class _ForumReplyPageState extends State<ForumReplyPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: const BarraSuperior(
-          titulo: 'Comentários do Forum', isCalendarPage: false),
+        titulo: 'Comentários do Forum',
+        isCalendarPage: false,
+        isForumPage: true
+      ),
       drawer: const MenuDrawer(),
       body: SingleChildScrollView(
         child: SizedBox(

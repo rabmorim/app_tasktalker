@@ -1,7 +1,7 @@
 /*
   Forum Service
   Feito por: Rodrigo abreu Amorim
-  Ultima modificação: 27/11/2024
+  Ultima modificação: 03/12/2024
  */
 
 import 'package:app_mensagem/model/forum.dart';
@@ -47,7 +47,14 @@ class ForumService {
   /// Método para deletar um forum
   Future<void> deleteForum(String forumId) async {
     try {
-      await _db.collection('forums').doc(forumId).delete();
+      String uid = _auth.currentUser!.uid;
+      String enterpriseCode = await getEnterpriseCode(uid);
+      await _db
+          .collection('enterprise')
+          .doc(enterpriseCode)
+          .collection('forums')
+          .doc(forumId)
+          .delete();
     } catch (e) {
       throw Exception('Erro ao deletar fórum: $e');
     }
@@ -167,5 +174,31 @@ class ForumService {
     String enterpriseCode = userDoc['code'];
 
     return enterpriseCode;
+  }
+
+  ///////////////////////
+  /// Método para atualizar um fórum
+  Future<void> updateForum(
+      String forumId, String newName, String newMessage) async {
+    try {
+      String uid = _auth.currentUser!.uid;
+      String enterpriseCode = await getEnterpriseCode(uid);
+
+      DocumentReference forumRef = _db
+          .collection('enterprise')
+          .doc(enterpriseCode)
+          .collection('forums')
+          .doc(forumId);
+
+      // Atualiza os campos do fórum
+      await forumRef.update({
+        'name': newName,
+        'message': newMessage,
+        'timestamp': FieldValue
+            .serverTimestamp(), 
+      });
+    } catch (e) {
+      throw Exception('Erro ao atualizar fórum: $e');
+    }
   }
 }
