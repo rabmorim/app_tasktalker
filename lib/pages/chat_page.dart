@@ -1,7 +1,7 @@
 /*
   Página do chat
   Feito por: Rodrigo abreu Amorim
-  Ultima modificação: 25/11/2024
+  Ultima modificação: 04/12/2024
  */
 
 import 'package:app_mensagem/pages/recursos/barra_superior.dart';
@@ -52,6 +52,8 @@ class _ChatPageState extends State<ChatPage> {
       appBar: BarraSuperior(
         titulo: widget.receiverUserName,
         isCalendarPage: false,
+        isForumPage: false,
+        isChatPage: true,
       ),
       body: Column(
         children: [

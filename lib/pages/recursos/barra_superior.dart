@@ -1,10 +1,11 @@
 /*
   Barra Superior da aplicação
   Feito por: Rodrigo abreu Amorim
-  Ultima modificação: 03/12/2024
+  Ultima modificação: 04/12/2024
  */
 
 import 'package:app_mensagem/pages/forum_page.dart';
+import 'package:app_mensagem/pages/home_page.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:table_calendar/table_calendar.dart';
@@ -15,15 +16,16 @@ class BarraSuperior extends StatefulWidget implements PreferredSizeWidget {
   final String titulo;
   final bool isCalendarPage;
   final bool? isForumPage;
+  final bool? isChatPage;
   final void Function(CalendarFormat)? onFormatChanged;
 
-  const BarraSuperior({
-    super.key,
-    required this.titulo,
-    required this.isCalendarPage,
-    this.onFormatChanged,
-    this.isForumPage,
-  });
+  const BarraSuperior(
+      {super.key,
+      required this.titulo,
+      required this.isCalendarPage,
+      this.onFormatChanged,
+      this.isForumPage,
+      this.isChatPage});
 
   @override
   State<BarraSuperior> createState() => _BarraSuperiorState();
@@ -37,26 +39,38 @@ class _BarraSuperiorState extends State<BarraSuperior> {
   Widget build(BuildContext context) {
     return AppBar(
       // Adapta o botão à esquerda com base no tipo de página
-      leading: widget.isForumPage == true
+      leading: widget.isChatPage == true
           ? IconButton(
               icon: const Icon(Icons.arrow_back, color: Colors.white54),
               onPressed: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const ForumPage(),
+                    builder: (context) => const HomePage(),
                   ),
                 );
               },
             )
-          : Builder(
-              builder: (BuildContext context) {
-                return IconButton(
-                  icon: const Icon(Icons.menu, color: Colors.white54),
-                  onPressed: () => Scaffold.of(context).openDrawer(),
-                );
-              },
-            ),
+          : widget.isForumPage == true
+              ? IconButton(
+                  icon: const Icon(Icons.arrow_back, color: Colors.white54),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const ForumPage(),
+                      ),
+                    );
+                  },
+                )
+              : Builder(
+                  builder: (BuildContext context) {
+                    return IconButton(
+                      icon: const Icon(Icons.menu, color: Colors.white54),
+                      onPressed: () => Scaffold.of(context).openDrawer(),
+                    );
+                  },
+                ),
       title: Center(
         child: Text(
           widget.titulo,

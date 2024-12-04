@@ -1,7 +1,7 @@
 /*
   Classe do formulário modal
   Feito por: Rodrigo abreu Amorim
-  Ultima modificação: 25/11/2024
+  Ultima modificação: 04/12/2024
  */
 
 
@@ -255,7 +255,8 @@ class _ModalFormState extends State<ModalForm> {
     );
   }
 
-//Transformando o evento preenchido em json para o google interpretar
+//////////////////////////////////
+///Transformando o evento preenchido em json para o google interpretar
   Future<dynamic> eventToJson(
       String title,
       String description,
@@ -288,7 +289,8 @@ class _ModalFormState extends State<ModalForm> {
     return json;
   }
 
-// Função para gerar e obter o access token
+//////////////////
+/// Função para gerar e obter o access token
   Future<String> getAccessToken() async {
     const serviceAccountEmail =
         'firebase-adminsdk-uqeoc@chatapp-f6349.iam.gserviceaccount.com';
@@ -386,8 +388,6 @@ class _ModalFormState extends State<ModalForm> {
     }
   }
 
-  ///////////////////////
-  /// Método para delegar a tarefa para o Firestore
   ///////////////////////
   /// Método para delegar a tarefa para o Firestore e armazenar o UID
   Future<void> delegateTaskToUser(

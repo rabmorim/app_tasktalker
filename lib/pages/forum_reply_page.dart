@@ -41,30 +41,13 @@ class _ForumReplyPageState extends State<ForumReplyPage> {
     _commentsStream = _forumCommentService.getComments(widget.forumId);
   }
 
-  //////////////////
-  /// Método para adicionar um comentário
-  void _addComment() {
-    final text = _commentController.text.trim();
-    if (text.isNotEmpty) {
-      _forumCommentService.addComment(widget.forumId, text).then((_) {
-        _commentController.clear();
-      }).catchError((error) {
-        // ignore: use_build_context_synchronously
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Erro ao adicionar comentário: $error")),
-        );
-      });
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: const BarraSuperior(
-        titulo: 'Comentários do Forum',
-        isCalendarPage: false,
-        isForumPage: true
-      ),
+          titulo: 'Comentários do Forum',
+          isCalendarPage: false,
+          isForumPage: true),
       drawer: const MenuDrawer(),
       body: SingleChildScrollView(
         child: SizedBox(
@@ -83,6 +66,22 @@ class _ForumReplyPageState extends State<ForumReplyPage> {
         ),
       ),
     );
+  }
+
+  //////////////////
+  /// Método para adicionar um comentário
+  void _addComment() {
+    final text = _commentController.text.trim();
+    if (text.isNotEmpty) {
+      _forumCommentService.addComment(widget.forumId, text).then((_) {
+        _commentController.clear();
+      }).catchError((error) {
+        // ignore: use_build_context_synchronously
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Erro ao adicionar comentário: $error")),
+        );
+      });
+    }
   }
 
   /////////////////////////

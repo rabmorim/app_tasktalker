@@ -1,7 +1,7 @@
 /*
   Página do Fórum
   Feito por: Rodrigo Abreu Amorim
-  Última modificação: 03/12/2024
+  Última modificação: 04/12/2024
  */
 
 import 'package:app_mensagem/model/forum.dart';
@@ -12,19 +12,11 @@ import 'package:app_mensagem/pages/recursos/modal_forum.dart';
 import 'package:app_mensagem/services/forum_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 
 class ForumPage extends StatelessWidget {
   const ForumPage({super.key});
-
-  /////////////////////////////
-  /// Método para limitar a mensagem do fórum
-  String getPreview(String message) {
-    const int maxLength = 50;
-    return message.length > maxLength
-        ? '${message.substring(0, maxLength)}...'
-        : message;
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -192,7 +184,12 @@ class ForumPage extends StatelessWidget {
                     );
                   },
                 ),
-              ),
+              )
+                  // Adiciona a animação de entrada
+                  .animate()
+                  .fadeIn(duration: 900.ms, delay: (index * 400).ms)
+                  .move(
+                      begin: const Offset(-100, 0), curve: Curves.easeOutQuad),
             );
           },
         ),
@@ -284,6 +281,15 @@ class ForumPage extends StatelessWidget {
         );
       },
     );
+  }
+
+  /////////////////////////////
+  /// Método para limitar a mensagem do fórum
+  String getPreview(String message) {
+    const int maxLength = 50;
+    return message.length > maxLength
+        ? '${message.substring(0, maxLength)}...'
+        : message;
   }
 
   /////////////////////////////

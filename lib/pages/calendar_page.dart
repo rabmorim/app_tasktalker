@@ -1,9 +1,10 @@
 /*
   Página de calendário
   Feito por: Rodrigo abreu Amorim
-  Ultima modificação: 25/11/2024
+  Ultima modificação: 04/12/2024
  */
 import 'dart:convert';
+import 'package:animations/animations.dart';
 import 'package:app_mensagem/pages/recursos/barra_superior.dart';
 import 'package:app_mensagem/pages/recursos/drawer.dart';
 import 'package:app_mensagem/pages/recursos/get_user.dart';
@@ -14,6 +15,7 @@ import 'package:app_mensagem/services/auth/auth_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:googleapis/calendar/v3.dart' as calendar;
 import 'package:googleapis_auth/auth_io.dart';
 import 'package:intl/intl.dart';
@@ -280,7 +282,7 @@ class _CalendarPageState extends State<CalendarPage> {
   }
 
 ///////////////////////////////
-/// Método para deletar um evento
+  /// Método para deletar um evento
   Future<void> _deleteEvent({
     required String eventId,
     required String companyId,
@@ -473,34 +475,7 @@ class _CalendarPageState extends State<CalendarPage> {
                 default:
                   text = 'Error';
               }
-              _selectedEvents.sort((a, b) {
-                // Converta as strings armazenadas no Firestore em objetos DateTime
-                DateTime startA = DateTime.parse(a['start_time']);
-                DateTime startB = DateTime.parse(b['start_time']);
 
-                return startA.compareTo(startB);
-              });
-
-              // Listas para separar tarefas passadas e futuras
-              List<Map<String, dynamic>> passedTasks = [];
-              List<Map<String, dynamic>> upcomingTasks = [];
-              DateTime now = DateTime.now().toLocal();
-
-              for (var event in _selectedEvents) {
-                // Converta as strings para DateTime antes de comparar
-                // DateTime startTime = DateTime.parse(event['start_time']);
-                DateTime endTime = DateTime.parse(event['end_time']);
-
-                // Verifica se a tarefa já terminou
-                if (endTime.isBefore(now)) {
-                  passedTasks.add(event);
-                } else {
-                  upcomingTasks.add(event);
-                }
-              }
-
-              // Combina as listas: tarefas futuras primeiro, seguidas das passadas
-              _selectedEvents = [...upcomingTasks, ...passedTasks];
               return Center(child: Text(text));
             }, markerBuilder: (context, day, events) {
               if (events.isNotEmpty) {
@@ -560,212 +535,211 @@ class _CalendarPageState extends State<CalendarPage> {
           ),
           const SizedBox(height: 8.0),
           Expanded(
-              child: _selectedEvents.isEmpty
-                  ? const Center(
-                      child: Text('Nenhum evento'),
-                    )
-                  : ListView.builder(
-                      itemCount: _selectedEvents.length,
-                      itemBuilder: (context, index) {
-                        final event = _selectedEvents[index];
+            child: _selectedEvents.isEmpty
+                ? const Center(
+                    child: Text('Nenhum evento'),
+                  )
+                : ListView.builder(
+                    itemCount: _selectedEvents.length,
+                    itemBuilder: (context, index) {
+                      final event = _selectedEvents[index];
 
-                        if (event['source'] == 'app') {
-                          var userId = event['assigned_to'];
-                          var delegateUid = event['delegate_by'];
-                          final startTime = event['start_time'];
-                          final endTime = event['end_time'];
+                      if (event['source'] == 'app') {
+                        var userId = event['assigned_to'];
+                        var delegateUid = event['delegate_by'];
+                        final startTime = event['start_time'];
+                        final endTime = event['end_time'];
 
-                          String startFormatted =
-                              startTime != null ? formatTime(startTime) : '';
-                          String endFormatted =
-                              endTime != null ? formatTime(endTime) : '';
+                        String startFormatted =
+                            startTime != null ? formatTime(startTime) : '';
+                        String endFormatted =
+                            endTime != null ? formatTime(endTime) : '';
 
-                          return FutureBuilder<Color?>(
-                            future: colorManager.getUserColor(userId ?? ""),
-                            builder: (context, snapshotColor) {
-                              Color userColor =
-                                  snapshotColor.data ?? Colors.grey;
-                              DateTime now = DateTime.now();
-                              DateTime endTimeParsed =
-                                  DateTime.parse(event['end_time']);
-                              bool isExpired = endTimeParsed.isBefore(now);
+                        return FutureBuilder<Color?>(
+                          future: colorManager.getUserColor(userId ?? ""),
+                          builder: (context, snapshotColor) {
+                            Color userColor = snapshotColor.data ?? Colors.grey;
+                            DateTime now = DateTime.now();
+                            DateTime endTimeParsed =
+                                DateTime.parse(event['end_time']);
+                            bool isExpired = endTimeParsed.isBefore(now);
 
-                              Color backgroundColor = isExpired
-                                  ? Colors.white.withOpacity(0.8)
-                                  : userColor;
+                            Color backgroundColor = isExpired
+                                ? Colors.white.withOpacity(0.8)
+                                : userColor;
 
-                              return FutureBuilder<String?>(
-                                future: getUserName.getUserName(userId ?? ""),
-                                builder: (context, snapshotName) {
-                                  String userName = snapshotName.data ?? '';
-                                  TextStyle userNameStyle = isExpired
-                                      ? const TextStyle(
-                                          color: Colors.black,
-                                          decoration:
-                                              TextDecoration.lineThrough,
-                                          decorationThickness: 2,
-                                          fontSize: 14,
-                                          decorationColor: Colors.black)
-                                      : const TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold,
-                                          letterSpacing: 2.5,
-                                          fontSize: 14,
-                                        );
+                            return FutureBuilder<String?>(
+                              future: getUserName.getUserName(userId ?? ""),
+                              builder: (context, snapshotName) {
+                                String userName = snapshotName.data ?? '';
+                                TextStyle userNameStyle = isExpired
+                                    ? const TextStyle(
+                                        color: Colors.black,
+                                        decoration: TextDecoration.lineThrough,
+                                        decorationThickness: 2,
+                                        fontSize: 14,
+                                        decorationColor: Colors.black)
+                                    : const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        letterSpacing: 2.5,
+                                        fontSize: 14,
+                                      );
 
-                                  return GestureDetector(
-                                    onLongPressStart:
-                                        (LongPressStartDetails details) {
-                                      if (userId ==
-                                          firebaseAuth.currentUser!.uid || firebaseAuth.currentUser!.uid == delegateUid ) {
-                                        // Verificar permissão
-                                        showMenu(
-                                          context: context,
-                                          position: RelativeRect.fromLTRB(
-                                            details.globalPosition.dx,
-                                            details.globalPosition.dy,
-                                            details.globalPosition.dx,
-                                            details.globalPosition.dy,
-                                          ),
-                                          items: [
-                                            PopupMenuItem<String>(
-                                              value: 'Editar',
-                                              child: const ListTile(
-                                                leading: Icon(Icons.edit),
-                                                title: Text('Editar'),
-                                              ),
-                                              onTap: () => _editEvent(event,
-                                                  event['uid'], event['code']),
-                                            ),
-                                            PopupMenuItem<String>(
-                                                value: 'Excluir',
-                                                child: const ListTile(
-                                                  leading: Icon(Icons.delete),
-                                                  title: Text('Excluir'),
-                                                ),
-                                                onTap: () => _deleteEvent(
-                                                      eventId: event['uid'],
-                                                      companyId: event['code'],
-                                                      googleEventId: event[
-                                                          'google_event_id'], // Certifique-se de que esse campo está presente nos dados do evento
-                                                    )),
-                                          ],
-                                        );
-                                      } else {
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(
-                                          const SnackBar(
-                                            content: Text(
-                                                'Você não tem permissão para editar este evento.'),
-                                          ),
-                                        );
-                                      }
-                                    },
-                                    child: Container(
-                                      margin: const EdgeInsets.only(bottom: 8),
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(15),
-                                        color: backgroundColor,
-                                      ),
-                                      child: ExpansionTile(
-                                        leading: const SizedBox(width: 30),
-                                        dense: true,
-                                        title: Align(
-                                          alignment: Alignment.center,
-                                          child: Text(userName.toUpperCase(),
-                                              style: userNameStyle),
+                                return GestureDetector(
+                                  onLongPressStart:
+                                      (LongPressStartDetails details) {
+                                    if (userId ==
+                                            firebaseAuth.currentUser!.uid ||
+                                        firebaseAuth.currentUser!.uid ==
+                                            delegateUid) {
+                                      // Verificar permissão
+                                      showMenu(
+                                        context: context,
+                                        position: RelativeRect.fromLTRB(
+                                          details.globalPosition.dx,
+                                          details.globalPosition.dy,
+                                          details.globalPosition.dx,
+                                          details.globalPosition.dy,
                                         ),
-                                        children: [
-                                          Align(
-                                            alignment: Alignment.center,
-                                            child: Padding(
-                                              padding:
-                                                  const EdgeInsets.all(0.0),
-                                              child: Column(
-                                                children: [
-                                                  if (event['title'] != null &&
-                                                      event['title']!
-                                                          .isNotEmpty)
-                                                    Text(
-                                                      event['title'],
-                                                      style: userNameStyle,
-                                                    ),
-                                                  if (event['description'] !=
-                                                          null &&
-                                                      event['description']!
-                                                          .isNotEmpty)
-                                                    Text(
-                                                      event['description'],
-                                                      style: userNameStyle,
-                                                    ),
+                                        items: [
+                                          PopupMenuItem<String>(
+                                            value: 'Editar',
+                                            child: const ListTile(
+                                              leading: Icon(Icons.edit),
+                                              title: Text('Editar'),
+                                            ),
+                                            onTap: () => _editEvent(event,
+                                                event['uid'], event['code']),
+                                          ),
+                                          PopupMenuItem<String>(
+                                              value: 'Excluir',
+                                              child: const ListTile(
+                                                leading: Icon(Icons.delete),
+                                                title: Text('Excluir'),
+                                              ),
+                                              onTap: () => _deleteEvent(
+                                                    eventId: event['uid'],
+                                                    companyId: event['code'],
+                                                    googleEventId: event[
+                                                        'google_event_id'], // Certifique-se de que esse campo está presente nos dados do evento
+                                                  )),
+                                        ],
+                                      );
+                                    } else {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                              'Você não tem permissão para editar este evento.'),
+                                        ),
+                                      );
+                                    }
+                                  },
+                                  child: Container(
+                                    margin: const EdgeInsets.only(bottom: 8),
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(15),
+                                      color: backgroundColor,
+                                    ),
+                                    child: ExpansionTile(
+                                      leading: const SizedBox(width: 30),
+                                      dense: true,
+                                      title: Align(
+                                        alignment: Alignment.center,
+                                        child: Text(userName.toUpperCase(),
+                                            style: userNameStyle),
+                                      ),
+                                      children: [
+                                        Align(
+                                          alignment: Alignment.center,
+                                          child: Padding(
+                                            padding: const EdgeInsets.all(0.0),
+                                            child: Column(
+                                              children: [
+                                                if (event['title'] != null &&
+                                                    event['title']!.isNotEmpty)
                                                   Text(
-                                                    '$startFormatted - $endFormatted',
+                                                    event['title'],
                                                     style: userNameStyle,
                                                   ),
-                                                ],
-                                              ),
+                                                if (event['description'] !=
+                                                        null &&
+                                                    event['description']!
+                                                        .isNotEmpty)
+                                                  Text(
+                                                    event['description'],
+                                                    style: userNameStyle,
+                                                  ),
+                                                Text(
+                                                  '$startFormatted - $endFormatted',
+                                                  style: userNameStyle,
+                                                ),
+                                              ],
                                             ),
                                           ),
-                                        ],
-                                      ),
+                                        ),
+                                      ],
                                     ),
-                                  );
-                                },
-                              );
-                            },
-                          );
-                        } else if (event['source'] == 'google') {
-                          final title = event['title'] ?? 'Evento';
-                          final startTime = event['start_time'];
-                          final endTime = event['end_time'];
-
-                          String startFormatted =
-                              startTime != null ? formatTime(startTime) : '';
-                          String endFormatted =
-                              endTime != null ? formatTime(endTime) : '';
-
-                          return Container(
-                            margin: const EdgeInsets.only(bottom: 8),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(15),
-                              color: Colors.blueGrey[
-                                  100], // Cor padrão para eventos do Google Calendar
-                            ),
-                            child: ExpansionTile(
-                              leading: const SizedBox(width: 30),
-                              dense: true,
-                              title: Align(
-                                alignment: Alignment.center,
-                                child: Text(
-                                  title.toUpperCase(),
-                                  style: const TextStyle(
-                                    color: Colors.black,
-                                    fontWeight: FontWeight.bold,
-                                    letterSpacing: 2.5,
-                                    fontSize: 14,
                                   ),
+                                )
+                                    .animate()
+                                    .move(
+                                      begin: const Offset(0, -50),
+                                      duration: 800.ms,
+                                      delay: (index * 200).ms,
+                                      curve: Curves.easeOutQuad,
+                                    )
+                                    .fadeIn(
+                                        duration: 400.ms,
+                                        delay: (index * 100).ms);
+                              },
+                            );
+                          },
+                        );
+                      } else if (event['source'] == 'google') {
+                        final title = event['title'] ?? 'Evento';
+                        final startTime = event['start_time'];
+                        final endTime = event['end_time'];
+
+                        String startFormatted =
+                            startTime != null ? formatTime(startTime) : '';
+                        String endFormatted =
+                            endTime != null ? formatTime(endTime) : '';
+
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(15),
+                            color: Colors.blueGrey[
+                                100], // Cor padrão para eventos do Google Calendar
+                          ),
+                          child: ExpansionTile(
+                            leading: const SizedBox(width: 30),
+                            dense: true,
+                            title: Align(
+                              alignment: Alignment.center,
+                              child: Text(
+                                title.toUpperCase(),
+                                style: const TextStyle(
+                                  color: Colors.black,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 2.5,
+                                  fontSize: 14,
                                 ),
                               ),
-                              children: [
-                                Align(
-                                  alignment: Alignment.center,
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(0.0),
-                                    child: Column(
-                                      children: [
-                                        if (event['description'] != null &&
-                                            event['description']!.isNotEmpty)
-                                          Text(
-                                            event['description'],
-                                            style: const TextStyle(
-                                              color: Colors.black,
-                                              fontWeight: FontWeight.bold,
-                                              letterSpacing: 2.5,
-                                              fontSize: 14,
-                                            ),
-                                          ),
+                            ),
+                            children: [
+                              Align(
+                                alignment: Alignment.center,
+                                child: Padding(
+                                  padding: const EdgeInsets.all(0.0),
+                                  child: Column(
+                                    children: [
+                                      if (event['description'] != null &&
+                                          event['description']!.isNotEmpty)
                                         Text(
-                                          '$startFormatted - $endFormatted',
+                                          event['description'],
                                           style: const TextStyle(
                                             color: Colors.black,
                                             fontWeight: FontWeight.bold,
@@ -773,38 +747,51 @@ class _CalendarPageState extends State<CalendarPage> {
                                             fontSize: 14,
                                           ),
                                         ),
-                                      ],
-                                    ),
+                                      Text(
+                                        '$startFormatted - $endFormatted',
+                                        style: const TextStyle(
+                                          color: Colors.black,
+                                          fontWeight: FontWeight.bold,
+                                          letterSpacing: 2.5,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                              ],
-                            ),
-                          );
-                        }
-                        return null;
-                      },
-                    ))
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+                      return null;
+                    },
+                  ),
+          )
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              fullscreenDialog: true,
-              builder: (context) => Scaffold(
-                appBar: AppBar(
-                  title: const Text('Adicione uma Tarefa '),
-                ),
-                body: const ModalForm(),
-              ),
-            ),
+      floatingActionButton: OpenContainer(
+        transitionType:
+            ContainerTransitionType.fadeThrough, // Tipo de transição
+        transitionDuration: const Duration(milliseconds: 950),
+        closedElevation: 6.0,
+        closedShape: const CircleBorder(),
+        closedColor: Colors.grey,
+        closedBuilder: (BuildContext context, VoidCallback openContainer) {
+          return const SizedBox(
+            height: 56.0,
+            width: 56.0,
+            child: Icon(Icons.add, color: Colors.white),
           );
         },
-        backgroundColor: Colors.grey,
-        shape: const CircleBorder(
-          eccentricity: 1,
-        ),
-        child: const Icon(Icons.add),
+        openBuilder: (BuildContext context, VoidCallback closeContainer) {
+          return Scaffold(
+            appBar: AppBar(
+              title: const Text('Adicione uma Tarefa'),
+            ),
+            body: const ModalForm(),
+          );
+        },
       ),
     );
   }

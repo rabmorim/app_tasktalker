@@ -1,13 +1,14 @@
 /*
-  Classe para listar os usuários
-  Feito por: Rodrigo abreu Amorim
-  Ultima modificação: 25/11/2024
+  Página De listagem de Usuários
+  Feito por: Rodrigo Abreu Amorim
+  Última modificação: 04/12/2024
  */
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:app_mensagem/pages/chat_page.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 final FirebaseAuth _auth = FirebaseAuth.instance;
 
@@ -31,11 +32,9 @@ class _BuildUserListState extends State<BuildUserList> {
   /// Método para buscar o código da empresa do usuário logado
   Future<void> _fetchUserCompanyCode() async {
     try {
-      // Obtenha o UID do usuário atual
       final currentUserId = _auth.currentUser?.uid;
       if (currentUserId == null) return;
 
-      // Consultar a coleção `enterprise` para encontrar o documento que contém o usuário logado na subcoleção `users`
       QuerySnapshot enterpriseSnapshot =
           await FirebaseFirestore.instance.collection('enterprise').get();
 
@@ -45,13 +44,13 @@ class _BuildUserListState extends State<BuildUserList> {
         if (usersCollection.docs
             .any((userDoc) => userDoc.id == currentUserId)) {
           setState(() {
-            _userCompanyCode = doc.id; // Armazenar o código da empresa
+            _userCompanyCode = doc.id;
           });
           break;
         }
       }
     } catch (e) {
-     //
+      // Log ou mensagem de erro
     }
   }
 
@@ -73,7 +72,7 @@ class _BuildUserListState extends State<BuildUserList> {
           .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-          return const Text('error');
+          return const Text('Error');
         }
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(
@@ -82,27 +81,31 @@ class _BuildUserListState extends State<BuildUserList> {
             ),
           );
         }
-        return ListView(
-          children: snapshot.data!.docs
-              .map<Widget>((doc) => _buildUserListItem(doc))
-              .toList(),
+        final users = snapshot.data!.docs;
+
+        return ListView.builder(
+          itemCount: users.length,
+          itemBuilder: (context, index) {
+            final doc = users[index];
+            return _buildUserListItem(doc, index);
+          },
         );
       },
     );
   }
 
-  Widget _buildUserListItem(DocumentSnapshot document) {
+  Widget _buildUserListItem(DocumentSnapshot document, int index) {
     Map<String, dynamic> data = document.data()! as Map<String, dynamic>;
 
     if (_auth.currentUser!.uid != data['uid']) {
       return Column(
         children: [
-          const SizedBox(
-            height: 5,
-          ),
+          const SizedBox(height: 5),
           Container(
             decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8), color: Colors.grey),
+              borderRadius: BorderRadius.circular(8),
+              color: Colors.grey,
+            ),
             child: ListTile(
               trailing: const Icon(
                 Icons.keyboard_arrow_right,
@@ -110,6 +113,7 @@ class _BuildUserListState extends State<BuildUserList> {
               ),
               titleAlignment: ListTileTitleAlignment.center,
               title: Text(data['userName']),
+              leading: const Icon(Icons.person),
               onTap: () {
                 Navigator.push(
                   context,
@@ -122,9 +126,11 @@ class _BuildUserListState extends State<BuildUserList> {
                   ),
                 );
               },
-              leading: const Icon(Icons.person),
             ),
-          ),
+          )
+              .animate() // Aplica a animação
+              .fadeIn(duration: 900.ms, delay: (index * 400).ms)
+              .move(begin: const Offset(-100, 0), curve: Curves.easeOutQuad),
         ],
       );
     } else {
