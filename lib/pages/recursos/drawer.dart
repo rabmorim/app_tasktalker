@@ -4,11 +4,11 @@
   Ultima modificação: 25/11/2024
  */
 
-
 import 'package:app_mensagem/pages/calendar_page.dart';
 import 'package:app_mensagem/pages/forum_page.dart';
 import 'package:app_mensagem/pages/google_conection.dart';
 import 'package:app_mensagem/pages/home_page.dart';
+import 'package:app_mensagem/pages/kanban_board_page.dart';
 import 'package:app_mensagem/pages/user_task_list.dart';
 import 'package:app_mensagem/services/auth/auth_gate.dart';
 import 'package:app_mensagem/services/auth/auth_service.dart';
@@ -36,12 +36,32 @@ class _MenuDrawerState extends State<MenuDrawer> {
   // Variável de controle de estado dos botões
   bool isLoggedInWithGoogle = false;
 
+  String? enterpriseCode;
+
   @override
   void initState() {
     super.initState();
     checkGoogleLogin();
+    _initializeUserData();
   }
 
+  Future<void> _initializeUserData() async {
+    User? currentUser = _firebaseAuth.currentUser;
+    if (currentUser != null) {
+      try {
+        // Obtendo o código da empresa
+        String code = await getEnterpriseCode(currentUser.uid);
+
+        setState(() {
+          enterpriseCode = code;
+        });
+      } catch (e) {
+        debugPrint('Erro ao carregar dados do usuário: $e');
+      }
+    }
+  }
+  //////////////////////////////////
+  /// Método para verificar o Login do Google
   void checkGoogleLogin() async {
     User? user = FirebaseAuth.instance.currentUser;
     if (user != null) {
@@ -53,20 +73,31 @@ class _MenuDrawerState extends State<MenuDrawer> {
     }
   }
 
+  ///////////////////////
+  /// Método para buscar a empresa do usuário cadastrado
+  Future<String> getEnterpriseCode(String uid) async {
+    DocumentSnapshot userDoc =
+        await FirebaseFirestore.instance.collection('users').doc(uid).get();
+
+    String enterpriseCode = userDoc['code'];
+
+    return enterpriseCode;
+  }
+
+  ///////////////////////////////////
+  /// Método para armazenar o userName do usuário autenticado
+  Future<String> getUserName() async {
+    String uid = _firebaseAuth.currentUser!.uid;
+    DocumentSnapshot userDoc =
+        await _firebaseFirestore.collection('users').doc(uid).get();
+    return userDoc.get('userName') ?? 'Unknown User';
+  }
+
   @override
   Widget build(BuildContext context) {
     // Variável para armazenar o email do usuário autenticado
     final String accountEmail =
         _firebaseAuth.currentUser?.email ?? 'Unknown Email';
-
-    ///////////////////////////////////
-    /// Método para armazenar o userName do usuário autenticado
-    Future<String> getUserName() async {
-      String uid = _firebaseAuth.currentUser!.uid;
-      DocumentSnapshot userDoc =
-          await _firebaseFirestore.collection('users').doc(uid).get();
-      return userDoc.get('userName') ?? 'Unknown User';
-    }
 
     ///////////////////////////////
     /// Método para mostrar o título e editar as configurações
@@ -231,6 +262,27 @@ class _MenuDrawerState extends State<MenuDrawer> {
                   MaterialPageRoute(
                     builder: (context) => const ForumPage(),
                   ),
+                );
+              },
+            ),
+            //Icone do Quadro Kanban
+            ListTile(
+              title: mostrarTitulo('Kanban'),
+              subtitle: mostrarSubTitulo('Quadro de Tarefas'),
+              leading: const FaIcon(
+                FontAwesomeIcons.listCheck,
+                size: 24,
+              ),
+              trailing: const Icon(
+                Icons.keyboard_arrow_right,
+                size: 20,
+              ),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => KanbanBoardPage(
+                          enterpriseId: enterpriseCode!)),
                 );
               },
             ),

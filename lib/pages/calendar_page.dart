@@ -774,7 +774,7 @@ class _CalendarPageState extends State<CalendarPage> {
         transitionType:
             ContainerTransitionType.fadeThrough, // Tipo de transição
         transitionDuration: const Duration(milliseconds: 950),
-        closedElevation: 6.0,
+        closedElevation: 6.0, 
         closedShape: const CircleBorder(),
         closedColor: Colors.grey,
         closedBuilder: (BuildContext context, VoidCallback openContainer) {
