@@ -127,7 +127,6 @@ class _KanbanBoardPageState extends State<KanbanBoardPage> {
   ) async {
     final titleController = TextEditingController();
     final messageController = TextEditingController();
-    String? selectedColumnId;
 
     // Busca as colunas do quadro atual para o dropdown
     final columnsCollection = FirebaseFirestore.instance
@@ -140,95 +139,147 @@ class _KanbanBoardPageState extends State<KanbanBoardPage> {
     showDialog(
       context: context,
       builder: (context) {
-        return SingleChildScrollView(
-          padding: const EdgeInsets.only(top: 150),
-          child: AlertDialog(
-            title: const Text('Nova Tarefa'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                UserListDropdown(
-                  onUserSelected: (userId) {
-                    setState(
-                      () {
-                        selectedUser = userId;
-                      },
-                    );
-                  },
-                ),
-                const SizedBox(
-                  height: 5,
-                ),
-                MyTextField(
-                    controller: titleController,
-                    labelText: 'Titulo',
-                    obscureText: false),
-                const SizedBox(
-                  height: 10,
-                ),
-                MyTextField(
-                    controller: messageController,
-                    labelText: 'Mensagem',
-                    obscureText: false),
-                const SizedBox(height: 10),
-                StreamBuilder<QuerySnapshot>(
-                  stream: columnsCollection.orderBy('position').snapshots(),
-                  builder: (context, snapshot) {
-                    if (!snapshot.hasData) {
-                      return const CircularProgressIndicator();
-                    }
+        String? localSelectedColumnId;
+        String? selectedPriority = 'Média'; // Valor padrão
 
-                    final docs = snapshot.data!.docs;
-                    return DropdownButton<String>(
-                      hint: const Text('Selecione a Coluna'),
-                      value: selectedColumnId,
-                      onChanged: (value) {
-                        selectedColumnId = value;
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return SingleChildScrollView(
+              padding: const EdgeInsets.only(top: 150),
+              child: AlertDialog(
+                title: const Text('Nova Tarefa'),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    UserListDropdown(
+                      onUserSelected: (userId) {
+                        setState(() {
+                          selectedUser = userId;
+                        });
                       },
-                      items: docs.map((doc) {
-                        final data = doc.data() as Map<String, dynamic>;
-                        return DropdownMenuItem<String>(
-                          value: doc.id,
-                          child: Text(data['title'] ?? 'Sem título'),
+                    ),
+                    const SizedBox(height: 5),
+                    MyTextField(
+                      controller: titleController,
+                      labelText: 'Título',
+                      obscureText: false,
+                    ),
+                    const SizedBox(height: 10),
+                    MyTextField(
+                      controller: messageController,
+                      labelText: 'Mensagem',
+                      obscureText: false,
+                    ),
+                    const SizedBox(height: 10),
+                    StreamBuilder<QuerySnapshot>(
+                      stream: columnsCollection.orderBy('position').snapshots(),
+                      builder: (context, snapshot) {
+                        if (!snapshot.hasData) {
+                          return const CircularProgressIndicator();
+                        }
+
+                        final docs = snapshot.data!.docs;
+                        return DropdownButton<String>(
+                          hint: const Text('Selecione a Coluna'),
+                          value: localSelectedColumnId,
+                          onChanged: (value) {
+                            setModalState(() {
+                              localSelectedColumnId = value;
+                            });
+                          },
+                          items: docs.map((doc) {
+                            final data = doc.data() as Map<String, dynamic>;
+                            return DropdownMenuItem<String>(
+                              value: doc.id,
+                              child: Text(data['title'] ?? 'Sem título'),
+                            );
+                          }).toList(),
                         );
-                      }).toList(),
-                    );
-                  },
+                      },
+                    ),
+                    const SizedBox(height: 10),
+                    // Prioridade com Radio Buttons
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        const Text(
+                          'Prioridade:',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        RadioListTile<String>(
+                          title: const Text('Alta'),
+                          activeColor: Colors.white,
+                          value: 'Alta',
+                          groupValue: selectedPriority,
+                          onChanged: (value) {
+                            setModalState(() {
+                              selectedPriority = value;
+                            });
+                          },
+                        ),
+                        RadioListTile<String>(
+                          title: const Text('Média'),
+                          activeColor: Colors.white,
+                          value: 'Média',
+                          groupValue: selectedPriority,
+                          onChanged: (value) {
+                            setModalState(() {
+                              selectedPriority = value;
+                            });
+                          },
+                        ),
+                        RadioListTile<String>(
+                          title: const Text('Baixa'),
+                          activeColor: Colors.white,
+                          value: 'Baixa',
+                          groupValue: selectedPriority,
+                          onChanged: (value) {
+                            setModalState(() {
+                              selectedPriority = value;
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text(
-                  'Cancelar',
-                  style: TextStyle(color: Colors.white54),
-                ),
-              ),
-              ElevatedButton(
-                onPressed: () async {
-                  final title = titleController.text.trim();
-                  final message = messageController.text.trim();
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text(
+                      'Cancelar',
+                      style: TextStyle(color: Colors.white54),
+                    ),
+                  ),
+                  ElevatedButton(
+                    onPressed: () async {
+                      final title = titleController.text.trim();
+                      final message = messageController.text.trim();
 
-                  if (title.isNotEmpty && selectedColumnId != null) {
-                    await _createTask(
-                      enterpriseId: enterpriseId,
-                      boardId: boardId,
-                      columnId: selectedColumnId!,
-                      title: title,
-                      message: message,
-                    );
-                    // ignore: use_build_context_synchronously
-                    Navigator.of(context).pop();
-                  }
-                },
-                child: const Text(
-                  'Adicionar',
-                  style: TextStyle(color: Colors.white54),
-                ),
+                      if (title.isNotEmpty &&
+                          localSelectedColumnId != null &&
+                          selectedPriority != null) {
+                        await _createTask(
+                          enterpriseId: enterpriseId,
+                          boardId: boardId,
+                          columnId: localSelectedColumnId!,
+                          title: title,
+                          message: message,
+                          priority: selectedPriority!,
+                        );
+                        // ignore: use_build_context_synchronously
+                        Navigator.of(context).pop();
+                      }
+                    },
+                    child: const Text(
+                      'Adicionar',
+                      style: TextStyle(color: Colors.white54),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            );
+          },
         );
       },
     );
@@ -236,17 +287,23 @@ class _KanbanBoardPageState extends State<KanbanBoardPage> {
 
   /////////////////////////////////
   /// Método para Criar uma tarefa
-  Future<void> _createTask({
-    required String enterpriseId,
-    required String boardId,
-    required String columnId,
-    required String title,
-    required String message,
-  }) async {
+  Future<void> _createTask(
+      {required String enterpriseId,
+      required String boardId,
+      required String columnId,
+      required String title,
+      required String message,
+      required String priority}) async {
     final FirebaseAuth auth = FirebaseAuth.instance;
     String uid = auth.currentUser!.uid;
     TaskColorManager colorManager = TaskColorManager();
-    Future<Color?> userColor = colorManager.getUserColor(uid);
+
+    // Aguardando o valor da cor do usuário
+    Color? userColor = await colorManager.getUserColor(selectedUser!);
+
+    // Converter a cor para uma string hexadecimal
+    String colorHex =
+        '#${userColor!.value.toRadixString(16).padLeft(8, '0').toUpperCase()}';
 
     final tasksCollection = FirebaseFirestore.instance
         .collection('enterprise')
@@ -263,7 +320,8 @@ class _KanbanBoardPageState extends State<KanbanBoardPage> {
       'timestamp': FieldValue.serverTimestamp(),
       'uid': uid,
       'receiverUid': selectedUser,
-      // 'color': userColor
+      'color': colorHex,
+      'priority': priority
     });
   }
 
