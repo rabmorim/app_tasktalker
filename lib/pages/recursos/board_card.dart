@@ -5,25 +5,24 @@ class BoardCard extends StatelessWidget {
   final String title; // Título da tarefa
   final String message; // Descrição ou detalhes da tarefa
   final String color; // Cor associada ao usuário
-  final String receiverUid; //uid do usuário delegado
-  final GetUser _getUser = GetUser(); // Instancia do getUser
+  final String receiverUid; // uid do usuário delegado
+  final String priority; // Prioridade da tarefa delegada
+  final GetUser _getUser = GetUser(); // Instância do getUser
 
   BoardCard({
     super.key,
     required this.title,
     required this.message,
     required this.color,
-    required this.receiverUid
-    
+    required this.receiverUid,
+    required this.priority,
   });
 
   @override
   Widget build(BuildContext context) {
-
     return FutureBuilder<String?>(
       future: _getUser.getUserName(receiverUid),
       builder: (context, snapshot) {
-        // Verifica o estado da Future
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Card(
             elevation: 4,
@@ -53,28 +52,69 @@ class BoardCard extends StatelessWidget {
           );
         }
 
-        // Exibe o nome do usuário se o Future foi resolvido
         final String userName = snapshot.data ?? 'Usuário desconhecido';
+        final cardColor = Color(int.parse(color.replaceFirst('#', '0xff')));
+        Color textColor = Colors.white;
+
+        // Badge de prioridade com texto diferente baseado no valor
+        String priorityText;
+        Color badgeColor;
+
+        switch (priority.toLowerCase()) {
+          case 'alta':
+            priorityText = 'ALTA';
+            badgeColor = Colors.red;
+            break;
+          case 'média':
+            priorityText = 'MÉDIA';
+            badgeColor = Colors.black;
+            break;
+          case 'baixa':
+          default:
+            priorityText = 'BAIXA';
+            badgeColor = Colors.black;
+        }
 
         return Card(
           elevation: 4,
           margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-          color: Color(int.parse(color.replaceFirst('#', '0xff'))),
+          color: cardColor,
           child: Padding(
             padding: const EdgeInsets.all(8.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Icon(Icons.person, color: Colors.white),
-                    const SizedBox(width: 8),
-                    Text(
-                      userName.toUpperCase(),
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                    Row(
+                      children: [
+                        const Icon(Icons.person, color: Colors.white),
+                        const SizedBox(width: 8),
+                        Text(
+                          userName.toUpperCase(),
+                          style:  TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: textColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: badgeColor,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        priorityText,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                   ],
@@ -82,18 +122,18 @@ class BoardCard extends StatelessWidget {
                 const SizedBox(height: 8),
                 Text(
                   title,
-                  style: const TextStyle(
+                  style:  TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: textColor,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   message,
-                  style: const TextStyle(
+                  style:  TextStyle(
                     fontSize: 14,
-                    color: Colors.white,
+                    color: textColor,
                   ),
                 ),
               ],

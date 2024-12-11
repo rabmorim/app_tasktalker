@@ -89,6 +89,7 @@ class _KanbanBoardPageState extends State<KanbanBoardPage> {
               ),
             ),
           ),
+
           // Exibe o quadro Kanban selecionado
           Expanded(
             child: selectedBoardId == null
@@ -127,8 +128,9 @@ class _KanbanBoardPageState extends State<KanbanBoardPage> {
   ) async {
     final titleController = TextEditingController();
     final messageController = TextEditingController();
+    final labelController = TextEditingController(); // Controller para labels
+    List<String> labels = []; // Lista de labels
 
-    // Busca as colunas do quadro atual para o dropdown
     final columnsCollection = FirebaseFirestore.instance
         .collection('enterprise')
         .doc(enterpriseId)
@@ -158,7 +160,6 @@ class _KanbanBoardPageState extends State<KanbanBoardPage> {
                         });
                       },
                     ),
-                    const SizedBox(height: 5),
                     MyTextField(
                       controller: titleController,
                       labelText: 'Título',
@@ -177,7 +178,6 @@ class _KanbanBoardPageState extends State<KanbanBoardPage> {
                         if (!snapshot.hasData) {
                           return const CircularProgressIndicator();
                         }
-
                         final docs = snapshot.data!.docs;
                         return DropdownButton<String>(
                           hint: const Text('Selecione a Coluna'),
@@ -198,7 +198,6 @@ class _KanbanBoardPageState extends State<KanbanBoardPage> {
                       },
                     ),
                     const SizedBox(height: 10),
-                    // Prioridade com Radio Buttons
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
@@ -241,6 +240,53 @@ class _KanbanBoardPageState extends State<KanbanBoardPage> {
                         ),
                       ],
                     ),
+                    const SizedBox(height: 10),
+                    // Botão e Campo de Adicionar Labels
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: labelController,
+                            decoration: const InputDecoration(
+                              labelText: 'Adicionar Label',
+                              labelStyle: TextStyle(color: Colors.white),
+                              fillColor: Colors.black,
+                              hoverColor: Colors.black,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.add, color: Colors.white),
+                          onPressed: () {
+                            final label = labelController.text.trim();
+                            if (label.isNotEmpty) {
+                              setModalState(() {
+                                labels.add(label);
+                                labelController.clear();
+                              });
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    // Exibição das Labels Adicionadas
+                    Wrap(
+                      spacing: 8.0,
+                      children: labels
+                          .map(
+                            (label) => Chip(
+                              label: Text(label),
+                              deleteIcon: const Icon(Icons.close),
+                              onDeleted: () {
+                                setModalState(() {
+                                  labels.remove(label);
+                                });
+                              },
+                            ),
+                          )
+                          .toList(),
+                    ),
                   ],
                 ),
                 actions: [
@@ -266,6 +312,7 @@ class _KanbanBoardPageState extends State<KanbanBoardPage> {
                           title: title,
                           message: message,
                           priority: selectedPriority!,
+                          labels: labels, // Salva as labels
                         );
                         // ignore: use_build_context_synchronously
                         Navigator.of(context).pop();
@@ -293,7 +340,8 @@ class _KanbanBoardPageState extends State<KanbanBoardPage> {
       required String columnId,
       required String title,
       required String message,
-      required String priority}) async {
+      required String priority,
+      required List<String> labels}) async {
     final FirebaseAuth auth = FirebaseAuth.instance;
     String uid = auth.currentUser!.uid;
     TaskColorManager colorManager = TaskColorManager();
@@ -321,7 +369,8 @@ class _KanbanBoardPageState extends State<KanbanBoardPage> {
       'uid': uid,
       'receiverUid': selectedUser,
       'color': colorHex,
-      'priority': priority
+      'priority': priority,
+      'labels': labels
     });
   }
 

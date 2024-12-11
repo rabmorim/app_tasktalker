@@ -24,6 +24,7 @@ class KanbanBoard extends StatelessWidget {
     return StreamBuilder<QuerySnapshot>(
       stream: columnsCollection.orderBy('position').snapshots(),
       builder: (context, snapshot) {
+        
         if (!snapshot.hasData) {
           return const Center(child: CircularProgressIndicator());
         }

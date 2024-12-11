@@ -37,12 +37,15 @@ class BoardList extends StatelessWidget {
           'message': draggedTask['message'],
           'color': draggedTask['color'],
           'receiverUid': draggedTask['receiverUid'],
+          'priority': draggedTask['priority'],
+          'timestamp': draggedTask['timestamp'],
+          'uid': draggedTask['uid']
         });
 
         if (columnId == draggedTask['sourceColumnId']) {
           return;
         } else {
-            // Remover a tarefa da coluna original
+          // Remover a tarefa da coluna original
           await FirebaseFirestore.instance
               .collection('enterprise')
               .doc(enterpriseId)
@@ -106,21 +109,25 @@ class BoardList extends StatelessWidget {
                             'color': data['color'],
                             'receiverUid': data['receiverUid'],
                             'sourceColumnId': columnId,
+                            'priority': data['priority'],
+                            'timestamp': data['timestamp'],
+                            'uid': data['uid']
                           },
                           feedback: Material(
                             child: BoardCard(
-                              title: data['title'] ?? 'Sem título',
-                              message: data['message'] ?? 'Sem descrição',
-                              color: data['color'] ?? '#FFFFFF',
-                              receiverUid:
-                                  data['receiverUid'] ?? 'Sem delegação',
-                            ),
+                                title: data['title'] ?? 'Sem título',
+                                message: data['message'] ?? 'Sem descrição',
+                                color: data['color'] ?? '#FFFFFF',
+                                receiverUid:
+                                    data['receiverUid'] ?? 'Sem delegação',
+                                priority: data['priority'] ?? 'Sem prioridade'),
                           ),
                           child: BoardCard(
                             title: data['title'] ?? 'Sem título',
                             message: data['message'] ?? 'Sem descrição',
                             color: data['color'] ?? '#FFFFFF',
                             receiverUid: data['receiverUid'] ?? 'Sem delegação',
+                            priority: data['priority'] ?? 'Sem prioridade',
                           ),
                         );
                       },
