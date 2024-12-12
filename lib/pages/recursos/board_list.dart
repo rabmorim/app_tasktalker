@@ -1,3 +1,8 @@
+/*
+  Página de Construção das Colunas do kanban
+  Feito por: Rodrigo abreu Amorim
+  Ultima modificação: 12/12/2024
+ */
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -39,7 +44,8 @@ class BoardList extends StatelessWidget {
           'receiverUid': draggedTask['receiverUid'],
           'priority': draggedTask['priority'],
           'timestamp': draggedTask['timestamp'],
-          'uid': draggedTask['uid']
+          'uid': draggedTask['uid'],
+          'labels': draggedTask['labels']
         });
 
         if (columnId == draggedTask['sourceColumnId']) {
@@ -100,6 +106,10 @@ class BoardList extends StatelessWidget {
                       itemBuilder: (context, index) {
                         final task = docs[index];
                         final data = task.data() as Map<String, dynamic>;
+                        // Labels carregadas como dynamic
+                        final List<dynamic> rawLabels = data['labels']; 
+                        // Converta para List<String>
+                        final List<String> labels = rawLabels.cast<String>(); 
 
                         return Draggable<Map<String, dynamic>>(
                           data: {
@@ -111,16 +121,20 @@ class BoardList extends StatelessWidget {
                             'sourceColumnId': columnId,
                             'priority': data['priority'],
                             'timestamp': data['timestamp'],
-                            'uid': data['uid']
+                            'uid': data['uid'],
+                            'labels': labels,
                           },
                           feedback: Material(
                             child: BoardCard(
-                                title: data['title'] ?? 'Sem título',
-                                message: data['message'] ?? 'Sem descrição',
-                                color: data['color'] ?? '#FFFFFF',
-                                receiverUid:
-                                    data['receiverUid'] ?? 'Sem delegação',
-                                priority: data['priority'] ?? 'Sem prioridade'),
+                              title: data['title'] ?? 'Sem título',
+                              message: data['message'] ?? 'Sem descrição',
+                              color: data['color'] ?? '#FFFFFF',
+                              receiverUid:
+                                  data['receiverUid'] ?? 'Sem delegação',
+                              priority: data['priority'] ?? 'Sem prioridade',
+                              labels: labels,
+                              taskId:task.id
+                            ),
                           ),
                           child: BoardCard(
                             title: data['title'] ?? 'Sem título',
@@ -128,6 +142,8 @@ class BoardList extends StatelessWidget {
                             color: data['color'] ?? '#FFFFFF',
                             receiverUid: data['receiverUid'] ?? 'Sem delegação',
                             priority: data['priority'] ?? 'Sem prioridade',
+                            labels: labels,
+                            taskId:task.id
                           ),
                         );
                       },

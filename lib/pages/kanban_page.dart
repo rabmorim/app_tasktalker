@@ -1,3 +1,9 @@
+/*
+  Página Intermediaria do Kanban, que começa ele.
+  Feito por: Rodrigo abreu Amorim
+  Ultima modificação: 12/12/2024
+ */
+
 import 'package:app_mensagem/pages/recursos/board_list.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';

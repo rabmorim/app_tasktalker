@@ -1,3 +1,8 @@
+/*
+  Página de Construção do Kanban inteiro
+  Feito por: Rodrigo abreu Amorim
+  Ultima modificação: 12/12/2024
+ */
 import 'package:app_mensagem/model/kanban.dart';
 import 'package:app_mensagem/pages/kanban_page.dart';
 import 'package:app_mensagem/pages/recursos/barra_superior.dart';
@@ -129,6 +134,7 @@ class _KanbanBoardPageState extends State<KanbanBoardPage> {
     final titleController = TextEditingController();
     final messageController = TextEditingController();
     final labelController = TextEditingController(); // Controller para labels
+    bool showTextField = false;
     List<String> labels = []; // Lista de labels
 
     final columnsCollection = FirebaseFirestore.instance
@@ -244,31 +250,67 @@ class _KanbanBoardPageState extends State<KanbanBoardPage> {
                     // Botão e Campo de Adicionar Labels
                     Row(
                       children: [
-                        Expanded(
-                          child: TextField(
-                            controller: labelController,
-                            decoration: const InputDecoration(
-                              labelText: 'Adicionar Label',
-                              labelStyle: TextStyle(color: Colors.white),
-                              fillColor: Colors.black,
-                              hoverColor: Colors.black,
-                            ),
-                          ),
-                        ),
                         IconButton(
                           icon: const Icon(Icons.add, color: Colors.white),
                           onPressed: () {
-                            final label = labelController.text.trim();
-                            if (label.isNotEmpty) {
-                              setModalState(() {
-                                labels.add(label);
-                                labelController.clear();
-                              });
-                            }
+                            setModalState(() {
+                              showTextField =
+                                  !showTextField; // Alterna a visibilidade
+                            });
                           },
+                        ),
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 300),
+                          width: showTextField ? 200 : 0,
+                          height: 40,
+                          curve: Curves.easeInOut,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: showTextField
+                              ? Row(
+                                  children: [
+                                    Expanded(
+                                      flex: 2,
+                                      child: TextField(
+                                        controller: labelController,
+                                        style: const TextStyle(
+                                            color: Colors.white),
+                                        decoration: const InputDecoration(
+                                          border: InputBorder.none,
+                                          contentPadding: EdgeInsets.symmetric(
+                                              horizontal: 2),
+                                          hintText: 'Nova label',
+                                          hintStyle:
+                                              TextStyle(color: Colors.white54),
+                                        ),
+                                      ),
+                                    ),
+                                    Expanded(
+                                      flex: 1,
+                                      child: IconButton(
+                                        icon: const Icon(Icons.send,
+                                            size: 15, color: Colors.white),
+                                        onPressed: () {
+                                          final newLabel =
+                                              labelController.text.trim();
+                                          if (newLabel.isNotEmpty) {
+                                            setModalState(() {
+                                              labels.add(newLabel);
+                                              labelController.clear();
+                                              showTextField = false;
+                                            });
+                                          }
+                                        },
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              : null,
                         ),
                       ],
                     ),
+
                     const SizedBox(height: 10),
                     // Exibição das Labels Adicionadas
                     Wrap(
@@ -312,7 +354,7 @@ class _KanbanBoardPageState extends State<KanbanBoardPage> {
                           title: title,
                           message: message,
                           priority: selectedPriority!,
-                          labels: labels, // Salva as labels
+                          labels: labels,
                         );
                         // ignore: use_build_context_synchronously
                         Navigator.of(context).pop();
