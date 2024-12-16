@@ -1,7 +1,7 @@
 /*
   Estilo da aplicação
   Feito por: Rodrigo abreu Amorim
-  Ultima modificação: 25/11/2024
+  Ultima modificação: 16/12/2024
  */
 
 import 'package:flutter/material.dart';
@@ -35,5 +35,8 @@ ThemeData estilo() {
         textSelectionTheme: const TextSelectionThemeData(
           cursorColor: Colors.white
       ),
+      floatingActionButtonTheme: const FloatingActionButtonThemeData(
+        backgroundColor: Colors.white
+      )
     );
 }

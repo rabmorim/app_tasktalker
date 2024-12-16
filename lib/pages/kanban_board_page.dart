@@ -1,7 +1,7 @@
 /*
   Página de Construção do Kanban inteiro
   Feito por: Rodrigo abreu Amorim
-  Ultima modificação: 12/12/2024
+  Ultima modificação: 16/12/2024
  */
 import 'package:app_mensagem/model/kanban.dart';
 import 'package:app_mensagem/pages/kanban_page.dart';
@@ -12,6 +12,7 @@ import 'package:app_mensagem/pages/recursos/text_field.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_expandable_fab/flutter_expandable_fab.dart';
 
 class KanbanBoardPage extends StatefulWidget {
   final String enterpriseId;
@@ -106,20 +107,39 @@ class _KanbanBoardPageState extends State<KanbanBoardPage> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: Colors.white,
-        onPressed: () {
-          if (selectedBoardId != null) {
-            _showCreateTaskDialog(
-                context, widget.enterpriseId, selectedBoardId!);
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                  content: Text('Selecione um quadro Kanban primeiro.')),
-            );
-          }
-        },
-        child: const Icon(Icons.add),
+      floatingActionButtonLocation: ExpandableFab.location,
+      floatingActionButton: ExpandableFab(
+        distance: 60,
+        children: [
+          FloatingActionButton.small(
+            backgroundColor: Colors.black,
+            heroTag: null,
+            child: const Icon(
+              Icons.add,
+              color: Colors.white,
+            ),
+            onPressed: () {
+              if (selectedBoardId != null) {
+                _showCreateTaskDialog(
+                    context, widget.enterpriseId, selectedBoardId!);
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                      content: Text('Selecione um quadro Kanban primeiro.')),
+                );
+              }
+            },
+          ),
+          FloatingActionButton.small(
+            backgroundColor: Colors.black,
+            heroTag: null,
+            child: const Icon(
+              Icons.collections_bookmark_rounded,
+              color: Colors.white,
+            ),
+            onPressed: () {},
+          ),
+        ],
       ),
     );
   }

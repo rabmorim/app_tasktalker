@@ -1,7 +1,7 @@
 /*
   Página de calendário
   Feito por: Rodrigo abreu Amorim
-  Ultima modificação: 04/12/2024
+  Ultima modificação: 16/12/2024
  */
 import 'dart:convert';
 import 'package:animations/animations.dart';
@@ -776,12 +776,12 @@ class _CalendarPageState extends State<CalendarPage> {
         transitionDuration: const Duration(milliseconds: 950),
         closedElevation: 6.0, 
         closedShape: const CircleBorder(),
-        closedColor: Colors.grey,
+        closedColor: Colors.white,
         closedBuilder: (BuildContext context, VoidCallback openContainer) {
           return const SizedBox(
             height: 56.0,
             width: 56.0,
-            child: Icon(Icons.add, color: Colors.white),
+            child: Icon(Icons.add, color: Colors.black),
           );
         },
         openBuilder: (BuildContext context, VoidCallback closeContainer) {

@@ -45,7 +45,8 @@ class BoardList extends StatelessWidget {
           'priority': draggedTask['priority'],
           'timestamp': draggedTask['timestamp'],
           'uid': draggedTask['uid'],
-          'labels': draggedTask['labels']
+          'labels': draggedTask['labels'],
+          'enterpriseId': draggedTask['enterpriseId']
         });
 
         if (columnId == draggedTask['sourceColumnId']) {
@@ -123,6 +124,7 @@ class BoardList extends StatelessWidget {
                             'timestamp': data['timestamp'],
                             'uid': data['uid'],
                             'labels': labels,
+                            'enterpriseId': enterpriseId
                           },
                           feedback: Material(
                             child: BoardCard(
@@ -133,7 +135,10 @@ class BoardList extends StatelessWidget {
                                   data['receiverUid'] ?? 'Sem delegação',
                               priority: data['priority'] ?? 'Sem prioridade',
                               labels: labels,
-                              taskId:task.id
+                              taskId:task.id,
+                              enterpriseId : enterpriseId,
+                              boardId : boardId,
+                              columnId: columnId
                             ),
                           ),
                           child: BoardCard(
@@ -143,7 +148,11 @@ class BoardList extends StatelessWidget {
                             receiverUid: data['receiverUid'] ?? 'Sem delegação',
                             priority: data['priority'] ?? 'Sem prioridade',
                             labels: labels,
-                            taskId:task.id
+                            taskId:task.id,
+                            enterpriseId: enterpriseId,
+                            boardId : boardId,
+                            columnId: columnId
+
                           ),
                         );
                       },

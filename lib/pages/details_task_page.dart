@@ -1,7 +1,7 @@
 /*
   Página de Detalhes das Tarefas do Kanban com Edição
   Feito por: Rodrigo Abreu Amorim
-  Última modificação: 12/12/2024
+  Última modificação: 16/12/2024
 */
 import 'package:app_mensagem/pages/recursos/barra_superior.dart';
 import 'package:app_mensagem/pages/recursos/button.dart';
@@ -16,18 +16,23 @@ class DetalhesTarefaPage extends StatefulWidget {
   final String color;
   final String receiverUid;
   final String priority;
+  final String enterpriseId;
   final List<String> labels;
+  final String columnId;
+  final String boardId;
 
-  const DetalhesTarefaPage({
-    super.key,
-    required this.taskId,
-    required this.title,
-    required this.message,
-    required this.color,
-    required this.receiverUid,
-    required this.priority,
-    required this.labels,
-  });
+  const DetalhesTarefaPage(
+      {super.key,
+      required this.taskId,
+      required this.title,
+      required this.message,
+      required this.color,
+      required this.receiverUid,
+      required this.priority,
+      required this.labels,
+      required this.enterpriseId,
+      required this.boardId,
+      required this.columnId});
 
   @override
   State<DetalhesTarefaPage> createState() => _DetalhesTarefaPageState();
@@ -46,6 +51,10 @@ class _DetalhesTarefaPageState extends State<DetalhesTarefaPage> {
   @override
   void initState() {
     super.initState();
+    _doProcess();
+  }
+
+  void _doProcess() {
     titleController = TextEditingController(text: widget.title);
     messageController = TextEditingController(text: widget.message);
     selectedPriority = widget.priority;
@@ -65,37 +74,39 @@ class _DetalhesTarefaPageState extends State<DetalhesTarefaPage> {
     });
   }
 
+  void saveTaskDetails() async {
+    try {
+      // Referência ao documento da tarefa no Firestore
+      final DocumentReference taskRef = FirebaseFirestore.instance
+          .collection('enterprise')
+          .doc(widget.enterpriseId)
+          .collection('kanban')
+          .doc(widget.boardId)
+          .collection('columns')
+          .doc(widget.columnId)
+          .collection('tasks')
+          .doc(widget.taskId);
 
-void saveTaskDetails() async {
-  try {
-    // Referência ao documento da tarefa no Firestore
-    final DocumentReference taskRef = FirebaseFirestore.instance
-        .collection('enterprise')
-        .doc('empresaId')
-        .collection('tasks')
-        .doc(widget.taskId);
-
-    // Atualização dos campos no Firestore
-    await taskRef.update({
-      'title': titleController.text,
-      'message': messageController.text,
-      'priority': selectedPriority, // Utilizando a prioridade selecionada nos RadioListTiles
-      'labels': editableLabels,
-    });
-    // ignore: use_build_context_synchronously
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Alterações salvas com sucesso!')),
-    );
-    // Após salvar, desabilitar o modo de edição
-    toggleEditingMode();
-  } catch (e) {
-    // ignore: use_build_context_synchronously
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Erro ao salvar alterações: $e')),
-    );
+      // Atualização dos campos no Firestore
+      await taskRef.update({
+        'title': titleController.text,
+        'message': messageController.text,
+        'priority': selectedPriority,
+        'labels': editableLabels,
+      });
+      // ignore: use_build_context_synchronously
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Alterações salvas com sucesso!')),
+      );
+      // Após salvar, desabilitar o modo de edição
+      toggleEditingMode();
+    } catch (e) {
+      // ignore: use_build_context_synchronously
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro ao salvar alterações: $e')),
+      );
+    }
   }
-}
-
 
   @override
   Widget build(BuildContext context) {

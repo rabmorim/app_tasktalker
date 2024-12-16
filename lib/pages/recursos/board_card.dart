@@ -1,7 +1,7 @@
 /*
   Página de Construção do Card das tarefas no Kanban
   Feito por: Rodrigo abreu Amorim
-  Ultima modificação: 12/12/2024
+  Ultima modificação: 16/12/2024
  */
 import 'package:app_mensagem/pages/details_task_page.dart';
 import 'package:app_mensagem/pages/recursos/get_user.dart';
@@ -15,7 +15,10 @@ class BoardCard extends StatelessWidget {
   final String priority; // Prioridade da tarefa delegada
   final List<String> labels; // Lista de labels
   final String taskId; // Id da tarefa
+  final String enterpriseId; // Id da empresa do usuário autenticado
   final GetUser _getUser = GetUser(); // Instância do getUser
+  final String columnId; // Id da coluna da tarefa
+  final String boardId; // Id do quadro kanban
 
   BoardCard({
     super.key,
@@ -25,7 +28,10 @@ class BoardCard extends StatelessWidget {
     required this.receiverUid,
     required this.priority,
     required this.labels,
-    required this.taskId
+    required this.taskId,
+    required this.enterpriseId,
+    required this.boardId,
+    required this.columnId
   });
 
   @override
@@ -99,6 +105,9 @@ class BoardCard extends StatelessWidget {
                   receiverUid: receiverUid,
                   priority: priority,
                   labels: labels,
+                  enterpriseId: enterpriseId,
+                  boardId: boardId,
+                  columnId: columnId
                 ),
               ),
             );

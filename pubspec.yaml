@@ -80,6 +80,7 @@ dependencies:
   dart_jsonwebtoken:
   flutter_animate: ^4.5.2
   animations: ^2.0.11
+  flutter_expandable_fab: ^2.3.0
 
 dev_dependencies:
   flutter_test:
