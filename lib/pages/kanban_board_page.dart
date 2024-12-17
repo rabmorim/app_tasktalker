@@ -1,7 +1,7 @@
 /*
   Página de Construção do Kanban inteiro
   Feito por: Rodrigo abreu Amorim
-  Ultima modificação: 16/12/2024
+  Ultima modificação: 17/12/2024
  */
 import 'package:app_mensagem/model/kanban.dart';
 import 'package:app_mensagem/pages/kanban_page.dart';
@@ -9,10 +9,12 @@ import 'package:app_mensagem/pages/recursos/barra_superior.dart';
 import 'package:app_mensagem/pages/recursos/list_users_dropdown.dart';
 import 'package:app_mensagem/pages/recursos/task_color_manager.dart';
 import 'package:app_mensagem/pages/recursos/text_field.dart';
+import 'package:app_mensagem/services/kanban_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_expandable_fab/flutter_expandable_fab.dart';
+import 'package:provider/provider.dart';
 
 class KanbanBoardPage extends StatefulWidget {
   final String enterpriseId;
@@ -26,11 +28,12 @@ class KanbanBoardPage extends StatefulWidget {
 class _KanbanBoardPageState extends State<KanbanBoardPage> {
   String? selectedBoardId;
   String? selectedBoardName;
-  // Variável para armazenar o usuário selecionado (a quem a tarefa será delegada)
   String? selectedUser;
+  bool isEditingColumns = false;
 
   @override
   Widget build(BuildContext context) {
+    final kanbanProvider = Provider.of<KanbanProvider>(context);
     final kanbanCollection = FirebaseFirestore.instance
         .collection('enterprise')
         .doc(widget.enterpriseId)
@@ -109,8 +112,9 @@ class _KanbanBoardPageState extends State<KanbanBoardPage> {
       ),
       floatingActionButtonLocation: ExpandableFab.location,
       floatingActionButton: ExpandableFab(
-        distance: 60,
+        distance: 80,
         children: [
+          //Botão para adicionar nova tarefa
           FloatingActionButton.small(
             backgroundColor: Colors.black,
             heroTag: null,
@@ -130,6 +134,8 @@ class _KanbanBoardPageState extends State<KanbanBoardPage> {
               }
             },
           ),
+
+          //Botão de adicionar nova coluna
           FloatingActionButton.small(
             backgroundColor: Colors.black,
             heroTag: null,
@@ -137,7 +143,38 @@ class _KanbanBoardPageState extends State<KanbanBoardPage> {
               Icons.collections_bookmark_rounded,
               color: Colors.white,
             ),
-            onPressed: () {},
+            onPressed: () {
+              if (selectedBoardId != null) {
+                _showCreateColumns(context);
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Selecione um Quadro Kanban primeiro'),
+                  ),
+                );
+              }
+            },
+          ),
+
+          //Botão de edição de colunas
+          FloatingActionButton.small(
+            backgroundColor: Colors.black,
+            heroTag: null,
+            child: const Icon(
+              Icons.edit,
+              color: Colors.white,
+            ),
+            onPressed: () {
+              if (selectedBoardId != null) {
+                kanbanProvider.toggleEditingColumns();
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Selecione um Quadro Kanban primeiro'),
+                  ),
+                );
+              }
+            },
           ),
         ],
       ),
@@ -434,6 +471,121 @@ class _KanbanBoardPageState extends State<KanbanBoardPage> {
       'priority': priority,
       'labels': labels
     });
+  }
+
+//////////////////////////////
+  /// Método para criar uma nova coluna
+  Future<void> createColumn(
+      {required String enterpriseId,
+      required String boardId,
+      required String columnName,
+      required num position}) async {
+    // Referencia da coluna no banco de dados
+    final columnsCollection = FirebaseFirestore.instance
+        .collection('enterprise')
+        .doc(enterpriseId)
+        .collection('kanban')
+        .doc(boardId)
+        .collection('columns');
+
+    //Adiciona a nova coluna na coleção columns do quadro kanban
+    await Future.wait([
+      columnsCollection.add({'title': columnName, 'position': position})
+    ]);
+  }
+
+/////////////////////////
+  /// Método para criar o modal para criar a nova coluna
+  Future<void> _showCreateColumns(BuildContext context) async {
+    final controller = TextEditingController();
+    final columnsCollection = FirebaseFirestore.instance
+        .collection('enterprise')
+        .doc(widget.enterpriseId)
+        .collection('kanban')
+        .doc(selectedBoardId)
+        .collection('columns');
+
+    // 1. Buscar as posições já existentes
+    final existingPositions = await _fetchExistingPositions(columnsCollection);
+
+    // 2. Criar uma lista de posições disponíveis (1 a 5)
+    final availablePositions = List.generate(5, (index) => index + 1)
+        .where((pos) => !existingPositions.contains(pos))
+        .toList();
+
+    num? selectedPosition; // Variável para armazenar a posição selecionada
+
+    // 3. Exibir o modal
+    showDialog(
+      // ignore: use_build_context_synchronously
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Nova Coluna'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: controller,
+              decoration: const InputDecoration(labelText: 'Nome da Coluna'),
+            ),
+            const SizedBox(height: 10),
+            const Text('Escolha a posição:'),
+            Wrap(
+              spacing: 8,
+              children: availablePositions.map((pos) {
+                return ChoiceChip(
+                  label: Text('Posição $pos'),
+                  selected: selectedPosition == pos,
+                  onSelected: (selected) {
+                    selectedPosition = pos; // Define a posição escolhida
+                    (context as Element).markNeedsBuild(); // Força rebuild
+                  },
+                );
+              }).toList(),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text(
+              'Cancelar',
+              style: TextStyle(color: Colors.white54),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final name = controller.text.trim();
+              if (name.isNotEmpty && selectedPosition != null) {
+                await createColumn(
+                  enterpriseId: widget.enterpriseId,
+                  boardId: selectedBoardId!,
+                  columnName: name,
+                  position: selectedPosition!,
+                );
+                // ignore: use_build_context_synchronously
+                Navigator.of(context).pop(); // Fecha o modal
+              }
+            },
+            child: const Text(
+              'Criar',
+              style: TextStyle(color: Colors.white54),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  ///////////////////////
+  /// Método para buscar as posições existentes no Firestore
+  Future<List<num>> _fetchExistingPositions(
+      CollectionReference columnsCollection) async {
+    final querySnapshot = await columnsCollection.get();
+    final positions = querySnapshot.docs
+        .map((doc) => doc['position'] as num) // Pega o campo 'position'
+        .toList();
+    return positions;
   }
 
 //////////////////////////////////

@@ -1,7 +1,7 @@
 /*
   Classe Main
   Feito por: Rodrigo abreu Amorim
-  Ultima modificação: 27/11/2024
+  Ultima modificação: 17/12/2024
  */
 
 import 'dart:async';
@@ -11,6 +11,7 @@ import 'package:app_mensagem/pages/recursos/task_notification_manager.dart';
 import 'package:app_mensagem/services/auth/auth_gate.dart';
 import 'package:app_mensagem/services/auth/auth_service.dart';
 import 'package:app_mensagem/services/forum_provider.dart';
+import 'package:app_mensagem/services/kanban_provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -31,8 +32,8 @@ void main() async {
         create: (context) => AuthService(),
       ),
       ChangeNotifierProvider(create: (context) => ForumProvider()),
-      
-    ], 
+      ChangeNotifierProvider(create: (context) => KanbanProvider())
+    ],
     child: const MyApp(),
   ));
 }
