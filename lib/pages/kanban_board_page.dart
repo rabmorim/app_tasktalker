@@ -52,7 +52,10 @@ class _KanbanBoardPageState extends State<KanbanBoardPage> {
               stream: kanbanCollection.snapshots(),
               builder: (context, snapshot) {
                 if (!snapshot.hasData) {
-                  return const Center(child: CircularProgressIndicator());
+                  return const Center(
+                      child: CircularProgressIndicator(
+                    color: Colors.white54,
+                  ));
                 }
 
                 final docs = snapshot.data!.docs;
@@ -102,7 +105,9 @@ class _KanbanBoardPageState extends State<KanbanBoardPage> {
           // Exibe o quadro Kanban selecionado
           Expanded(
             child: selectedBoardId == null
-                ? const Center(child: Text('Nenhum quadro Kanban selecionado.'))
+                ? const Center(
+                    child: Text('Nenhum quadro Kanban selecionado.'),
+                  )
                 : KanbanBoard(
                     enterpriseId: widget.enterpriseId,
                     boardId: selectedBoardId!,
@@ -129,7 +134,8 @@ class _KanbanBoardPageState extends State<KanbanBoardPage> {
               } else {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                      content: Text('Selecione um quadro Kanban primeiro.')),
+                    content: Text('Selecione um quadro Kanban primeiro.'),
+                  ),
                 );
               }
             },

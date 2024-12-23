@@ -1,8 +1,9 @@
 /*
   Página de Detalhes das Tarefas do Kanban com Edição
   Feito por: Rodrigo Abreu Amorim
-  Última modificação: 16/12/2024
+  Última modificação: 23/12/2024
 */
+import 'package:app_mensagem/pages/kanban_board_page.dart';
 import 'package:app_mensagem/pages/recursos/barra_superior.dart';
 import 'package:app_mensagem/pages/recursos/button.dart';
 import 'package:app_mensagem/pages/recursos/get_user.dart';
@@ -40,13 +41,14 @@ class DetalhesTarefaPage extends StatefulWidget {
 
 class _DetalhesTarefaPageState extends State<DetalhesTarefaPage> {
   final GetUser getUser = GetUser();
-
   bool isEditing = false;
-
   late TextEditingController titleController;
   late TextEditingController messageController;
   String selectedPriority = '';
   List<String> editableLabels = [];
+  bool showTextField = false;
+  final microTasksController = TextEditingController();
+  List<String> microTasks = [];
 
   @override
   void initState() {
@@ -59,6 +61,7 @@ class _DetalhesTarefaPageState extends State<DetalhesTarefaPage> {
     messageController = TextEditingController(text: widget.message);
     selectedPriority = widget.priority;
     editableLabels = List.from(widget.labels);
+    _fetchMicroTasks();
   }
 
   @override
@@ -74,6 +77,38 @@ class _DetalhesTarefaPageState extends State<DetalhesTarefaPage> {
     });
   }
 
+//////////////////////////////////////
+  /// Método para procurar as micro tarefas
+  Future<void> _fetchMicroTasks() async {
+    try {
+      final CollectionReference microTasksRef = FirebaseFirestore.instance
+          .collection('enterprise')
+          .doc(widget.enterpriseId)
+          .collection('kanban')
+          .doc(widget.boardId)
+          .collection('columns')
+          .doc(widget.columnId)
+          .collection('tasks')
+          .doc(widget.taskId)
+          .collection('microTasks');
+
+      final QuerySnapshot snapshot = await microTasksRef.get();
+      setState(() {
+        microTasks =
+            snapshot.docs.map((doc) => doc['title'] as String).toList();
+      });
+    } catch (e) {
+      // ignore: use_build_context_synchronously
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erro ao buscar micro tarefas: $e'),
+        ),
+      );
+    }
+  }
+
+  //////////////////////////////
+  /// Método para salvar os detalhes editados
   void saveTaskDetails() async {
     try {
       // Referência ao documento da tarefa no Firestore
@@ -104,6 +139,179 @@ class _DetalhesTarefaPageState extends State<DetalhesTarefaPage> {
       // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Erro ao salvar alterações: $e')),
+      );
+    }
+  }
+
+  //////////////////////////////
+  /// Método para adicionar uma nova microTarefa
+  Future<void> addMicroTask(String taskTitle) async {
+    try {
+      final CollectionReference microTasksRef = FirebaseFirestore.instance
+          .collection('enterprise')
+          .doc(widget.enterpriseId)
+          .collection('kanban')
+          .doc(widget.boardId)
+          .collection('columns')
+          .doc(widget.columnId)
+          .collection('tasks')
+          .doc(widget.taskId)
+          .collection('microTasks');
+
+      await microTasksRef.add({'title': taskTitle});
+      setState(() {
+        microTasks.add(taskTitle);
+      });
+    } catch (e) {
+      // ignore: use_build_context_synchronously
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erro ao adicionar micro tarefa: $e'),
+        ),
+      );
+    }
+  }
+
+  //////////////////////////////
+  /// Métedo para deletar uma micro tarefa existente
+  Future<void> deleteMicroTask(int index) async {
+    try {
+      final CollectionReference microTasksRef = FirebaseFirestore.instance
+          .collection('enterprise')
+          .doc(widget.enterpriseId)
+          .collection('kanban')
+          .doc(widget.boardId)
+          .collection('columns')
+          .doc(widget.columnId)
+          .collection('tasks')
+          .doc(widget.taskId)
+          .collection('microTasks');
+
+      final QuerySnapshot snapshot = await microTasksRef.get();
+      await snapshot.docs[index].reference.delete();
+    } catch (e) {
+      // ignore: use_build_context_synchronously
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro ao deletar micro tarefa: $e')),
+      );
+    }
+  }
+
+/////////////////////////////////
+  /// Método para abrir o modal de criação de novas micro tarefas
+  void _showAddTaskModal() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
+          title: const Text('Adicionar Micro Tarefa'),
+          content: TextField(
+            controller: microTasksController,
+            decoration: const InputDecoration(
+              hintText: 'Digite sua micro tarefa',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text(
+                'Cancelar',
+                style: TextStyle(color: Colors.white54),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                final newTask = microTasksController.text.trim();
+                if (newTask.isNotEmpty) {
+                  addMicroTask(newTask);
+                  microTasksController.clear();
+                  Navigator.of(context).pop();
+                }
+              },
+              child: const Text(
+                'Adicionar',
+                style: TextStyle(color: Colors.white54),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  ////////////////////////////////
+  /// Método para abrir o modal para deletar as tarefas existentes
+  void _showDeleteTask(String taskId) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
+          title: const Text('Remover tarefa'),
+          actions: [
+            const Text('Deseja realmente remover essa tarefa?'),
+            Row(
+              children: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text(
+                    'Cancelar',
+                    style: TextStyle(color: Colors.white54),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () {
+                    deleteTask(taskId);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            KanbanBoardPage(enterpriseId: widget.enterpriseId),
+                      ),
+                    );
+                  },
+                  child: const Text(
+                    'Remover',
+                    style: TextStyle(color: Colors.white54),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  //////////////////////////////
+  /// Método para deletar uma tarefa
+  Future<void> deleteTask(String taskId) async {
+    try {
+      FirebaseFirestore.instance
+          .collection('enterprise')
+          .doc(widget.enterpriseId)
+          .collection('kanban')
+          .doc(widget.boardId)
+          .collection('columns')
+          .doc(widget.columnId)
+          .collection('tasks')
+          .doc(widget.taskId)
+          .delete();
+    } catch (e) {
+      // ignore: use_build_context_synchronously
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erro ao Excluir a Tarefa: $e'),
+        ),
       );
     }
   }
@@ -267,6 +475,77 @@ class _DetalhesTarefaPageState extends State<DetalhesTarefaPage> {
                         text: isEditing ? 'Salvar' : 'Editar tarefa',
                       ),
                     ),
+                    const SizedBox(height: 20),
+                    //Botão para excluir
+                    SizedBox(
+                      width: 250,
+                      child: MyButton(
+                          onTap: () {
+                            _showDeleteTask(widget.taskId);
+                          },
+                          text: 'Excluir Tarefa'),
+                    ),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      height: 200,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Divider(height: 3),
+                          const SizedBox(height: 5),
+                           const Text(
+                            'Micro Tarefas',
+                            style: TextStyle(
+                              color: Colors.white54,
+                              fontSize: 25,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 3,
+                              wordSpacing: 6
+                            ),
+                          ),
+                          //Exibição das micro tarefas
+                          Expanded(
+                            child: ListView.builder(
+                              itemCount: microTasks.length,
+                              itemBuilder: (context, index) {
+                                final task = microTasks[index];
+                                return Container(
+                                  height: 60,
+                                  margin:
+                                      const EdgeInsets.symmetric(vertical: 5),
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[300],
+                                    borderRadius: BorderRadius.circular(15),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        task,
+                                        style: const TextStyle(
+                                            fontSize: 16, color: Colors.black),
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(Icons.close,
+                                            color: Colors.red),
+                                        onPressed: () {
+                                          setState(() {
+                                            deleteMicroTask(index);
+                                            microTasks.removeAt(index);
+                                          });
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
+                          )
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -274,6 +553,12 @@ class _DetalhesTarefaPageState extends State<DetalhesTarefaPage> {
           );
         },
       ),
+      floatingActionButton: FloatingActionButton(
+          child: const Icon(
+            Icons.add,
+            color: Colors.black,
+          ),
+          onPressed: () => _showAddTaskModal()),
     );
   }
 }

@@ -7,13 +7,13 @@ import 'package:flutter/material.dart';
 
 class KanbanProvider with ChangeNotifier {
   bool _isEditingColumns = false;
-
   bool get isEditingColumns => _isEditingColumns;
 
 ///////////////////////////////////
-/// Método para mudar o valor da variavel edição de colunas e gerenciar seu estado
+  /// Método para mudar o valor da variavel edição de colunas e gerenciar seu estado
   void toggleEditingColumns() {
     _isEditingColumns = !_isEditingColumns;
     notifyListeners();
   }
+  
 }
