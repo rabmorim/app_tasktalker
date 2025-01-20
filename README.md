@@ -58,4 +58,16 @@ O **TaskTalker** é um aplicativo de troca de mensagens, delegação e visualiza
 
 ---
 
+# Update 01 👋
+Foi realizado adição de algumas novas funcionalidades deixando o projeto ainda mais completo e funcional com o intuito de ser um app de bom gerenciamento. 
+
+## Novas Funcionalidades 🚀
+- [x] Ambiente de criação de forums de discussão para cada empresa, com opção de curtir, comentar e editar cada forum (dependendo da sua permissão).
+- [x] Ambiente com possibilidade de criação de diversos quadros kanban para cada empresa para organização de atividade e tarefas.
+- [x] Ambiente kanban com possibilidade de  deleção de tarefas, edição e exclusão de tarefas.
+- [x] Ambiente kanban com possibilidade de arrastar tarefas entre as colunas , criação e exclusão de colunas para organização da forma que preferir.
+      
+### Em breve vídeo das atualizações.❤️
+---
+
 **Desenvolvido com ❤️ por Rodrigo Abreu Amorim**
